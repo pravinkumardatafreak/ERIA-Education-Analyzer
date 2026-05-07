@@ -92,6 +92,19 @@ st.markdown("""
     background: #0f172a;
     border-right: 1px solid #1e293b;
   }
+  section[data-testid="stSidebar"] h3, section[data-testid="stSidebar"] h4 {
+    color: #f8fafc !important;
+    letter-spacing: 0.5px;
+  }
+  section[data-testid="stSidebar"] a {
+    color: #60a5fa !important;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  section[data-testid="stSidebar"] a:hover {
+    color: #93c5fd !important;
+    text-decoration: underline;
+  }
 
   /* ── Buttons ── */
   .stButton > button {
@@ -122,12 +135,13 @@ st.markdown("""
     line-height: 1;
   }
   .logo-sub {
-    color: #64748b;
-    font-size: 1rem;
+    color: #94a3b8;
+    font-size: 1.1rem;
     margin-top: -10px;
     margin-bottom: 30px;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
     text-transform: uppercase;
+    font-weight: 500;
   }
 
   /* ── Sidebar Status ── */
