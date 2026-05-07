@@ -54,8 +54,8 @@ st.markdown("""
 
   /* ── Cards ── */
   .card {
-    background: #1e293b;
-    border: 1px solid #334155;
+    background: var(--secondary-background-color, #1e293b);
+    border: 1px solid var(--border-color, #334155);
     border-radius: 12px;
     padding: 24px;
     margin-bottom: 16px;
@@ -67,7 +67,7 @@ st.markdown("""
   .card-title {
     font-size: 1.15rem;
     font-weight: 800;
-    color: #f8fafc;
+    color: var(--text-color, #f8fafc);
     margin-bottom: 20px;
     display: flex;
     align-items: center;
@@ -134,8 +134,8 @@ st.markdown("""
   .status-box {
     padding: 12px;
     border-radius: 10px;
-    background: rgba(30, 41, 59, 0.5);
-    border: 1px solid #334155;
+    background: var(--background-color, rgba(30, 41, 59, 0.5));
+    border: 1px solid var(--border-color, #334155);
     margin-bottom: 20px;
   }
   .status-dot {
