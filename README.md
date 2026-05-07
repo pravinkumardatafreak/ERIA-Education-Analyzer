@@ -3,6 +3,7 @@
 > **GUVI Capstone Project** | Domain: EdTech / Education Policy Analytics
 
 [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://huggingface.co/spaces/pravindatafreak/ERIA-EDUCATION_REGULATION_IMPACT_ANALYZER)
+**Live Demo Link:** [https://huggingface.co/spaces/pravindatafreak/ERIA-EDUCATION_REGULATION_IMPACT_ANALYZER](https://huggingface.co/spaces/pravindatafreak/ERIA-EDUCATION_REGULATION_IMPACT_ANALYZER)
 
 ERIA is an AI-powered platform that converts complex education regulation documents
 (UGC, AICTE, NAAC, NIRF, Ministry of Education) into simple, stakeholder-friendly insights.
