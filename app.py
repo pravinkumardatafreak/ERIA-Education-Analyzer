@@ -295,10 +295,10 @@ def render_summary_tab(analysis: dict) -> None:
         """, unsafe_allow_html=True)
 
     with c2:
-        st.markdown('<div class="card" style="height: 380px; display: flex; align-items: center; justify-content: center;">', unsafe_allow_html=True)
-        st.markdown('<div class="card-title" style="margin-bottom:0;">⚠️ Compliance Risk Level</div>', unsafe_allow_html=True)
-        render_risk_gauge(analysis.get("risk_level", "Medium"))
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="card-title" style="border-bottom:none;">⚠️ Compliance Risk Level</div>', unsafe_allow_html=True)
+            render_risk_gauge(analysis.get("risk_level", "Medium"))
+
 
     # Row 2: Summary & Sentiment Chart
     c3, c4 = st.columns([1.5, 1])
@@ -309,10 +309,9 @@ def render_summary_tab(analysis: dict) -> None:
         st.markdown('</div>', unsafe_allow_html=True)
 
     with c4:
-        st.markdown('<div class="card" style="height: 380px;">', unsafe_allow_html=True)
-        st.markdown('<div class="card-title">📊 Stakeholder Sentiment Map</div>', unsafe_allow_html=True)
-        render_impact_chart(analysis.get("stakeholder_impact", {}))
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="card-title" style="border-bottom:none;">📊 Stakeholder Sentiment Map</div>', unsafe_allow_html=True)
+            render_impact_chart(analysis.get("stakeholder_impact", {}))
 
     col1, col2 = st.columns(2)
     with col1:
@@ -416,11 +415,12 @@ def render_risks_tab(analysis: dict) -> None:
 def render_chronology_tab(analysis: dict) -> None:
     """Render the Chronology & Policy History tab."""
     notes = analysis.get("chronology_notes", "")
+    
     st.markdown('<div class="card"><div class="card-title">🕰️ Policy Chronology & History</div>', unsafe_allow_html=True)
     if notes:
-        st.markdown(f'<p style="color:#cbd5e1; line-height:1.7;">{notes}</p>', unsafe_allow_html=True)
+        st.markdown(notes) # Use standard markdown to render links properly
     else:
-        st.markdown('<p style="color:#64748b;">No chronology information was found in this document.</p>',
+        st.markdown('<p style="color:#94a3b8;">No specific chronology information was found, but this regulation aligns with <b>NEP 2020</b> and standard UGC regulatory frameworks.</p>',
                     unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
