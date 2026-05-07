@@ -278,35 +278,32 @@ def render_summary_tab(analysis: dict) -> None:
     # Row 1: Document Info & Risk Gauge
     c1, c2 = st.columns([1, 1.2])
     with c1:
-        st.markdown(f"""
-        <div class="card" style="height: 380px; overflow-y: auto;">
-          <div class="card-title">📋 Document Overview</div>
-          <table style="width:100%; color:#cbd5e1; font-size:1rem; border-collapse:collapse;">
-            <tr style="border-bottom: 1px solid #334155;"><td style="padding:12px; color:#94a3b8; width:160px;">Issuing Body</td>
-                <td style="padding:12px; font-weight:700; color:#60a5fa;">{analysis.get('issuing_body','N/A')}</td></tr>
-            <tr style="border-bottom: 1px solid #334155;"><td style="padding:12px; color:#94a3b8;">Category</td>
-                <td style="padding:12px; font-weight:700; color:#f8fafc;">{analysis.get('topic_category','N/A')}</td></tr>
-            <tr style="border-bottom: 1px solid #334155;"><td style="padding:12px; color:#94a3b8;">Regulation Date</td>
-                <td style="padding:12px; color:#f8fafc;">{analysis.get('regulation_date','Not specified')}</td></tr>
-            <tr><td style="padding:12px; color:#94a3b8;">Sentiment</td>
-                <td style="padding:12px;">{impact_badge(analysis.get('sentiment','Neutral'))}</td></tr>
-          </table>
-        </div>
-        """, unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="card-title" style="border-bottom:none;">📋 Document Overview</div>', unsafe_allow_html=True)
+            st.markdown(f"""
+            <table style="width:100%; color:var(--text-color); font-size:1rem; border-collapse:collapse;">
+                <tr style="border-bottom: 1px solid #334155;"><td style="padding:12px; color:#94a3b8; width:160px;">Issuing Body</td>
+                    <td style="padding:12px; font-weight:700; color:#60a5fa;">{analysis.get('issuing_body','N/A')}</td></tr>
+                <tr style="border-bottom: 1px solid #334155;"><td style="padding:12px; color:#94a3b8;">Category</td>
+                    <td style="padding:12px; font-weight:700;">{analysis.get('topic_category','N/A')}</td></tr>
+                <tr style="border-bottom: 1px solid #334155;"><td style="padding:12px; color:#94a3b8;">Regulation Date</td>
+                    <td style="padding:12px;">{analysis.get('regulation_date','Not specified')}</td></tr>
+                <tr><td style="padding:12px; color:#94a3b8;">Sentiment</td>
+                    <td style="padding:12px;">{impact_badge(analysis.get('sentiment','Neutral'))}</td></tr>
+            </table>
+            """, unsafe_allow_html=True)
 
     with c2:
         with st.container(border=True):
             st.markdown('<div class="card-title" style="border-bottom:none;">⚠️ Compliance Risk Level</div>', unsafe_allow_html=True)
             render_risk_gauge(analysis.get("risk_level", "Medium"))
 
-
     # Row 2: Summary & Sentiment Chart
     c3, c4 = st.columns([1.5, 1])
     with c3:
-        st.markdown('<div class="card" style="height: 380px; overflow-y: auto;">', unsafe_allow_html=True)
-        st.markdown('<div class="card-title">📝 Executive Summary</div>', unsafe_allow_html=True)
-        st.markdown(f'<p style="color:#cbd5e1; line-height:1.7; font-size:0.95rem;">{analysis.get("summary", analysis.get("executive_summary", ""))}</p>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="card-title" style="border-bottom:none;">📝 Executive Summary</div>', unsafe_allow_html=True)
+            st.write(analysis.get("summary", analysis.get("executive_summary", "No summary available.")))
 
     with c4:
         with st.container(border=True):
@@ -315,14 +312,15 @@ def render_summary_tab(analysis: dict) -> None:
 
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown('<div class="card"><div class="card-title">🎯 Purpose</div>', unsafe_allow_html=True)
-        st.markdown(f'<p style="color:#cbd5e1; line-height:1.7;">{analysis.get("purpose","")}</p>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="card-title" style="border-bottom:none;">🎯 Purpose</div>', unsafe_allow_html=True)
+            st.write(analysis.get("purpose", "N/A"))
 
     with col2:
-        st.markdown('<div class="card"><div class="card-title">🕰️ Historical Background</div>', unsafe_allow_html=True)
-        st.markdown(f'<p style="color:#cbd5e1; line-height:1.7;">{analysis.get("background","")}</p>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="card-title" style="border-bottom:none;">🕰️ Historical Background</div>', unsafe_allow_html=True)
+            st.write(analysis.get("background", "N/A"))
+
 
     key_clauses = analysis.get("key_clauses", [])
     if key_clauses:
