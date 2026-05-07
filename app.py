@@ -275,39 +275,42 @@ def render_bullet_list(items: list) -> None:
 
 def render_summary_tab(analysis: dict) -> None:
     """Render the Executive Summary tab."""
-    # Row 1: Document Info & Gauge
+    # Row 1: Document Info & Risk Gauge
     c1, c2 = st.columns([1, 1.2])
     with c1:
         st.markdown(f"""
-        <div class="card" style="height: 250px; overflow-y: auto;">
+        <div class="card" style="height: 380px; overflow-y: auto;">
           <div class="card-title">📋 Document Overview</div>
-          <table style="width:100%; color:#cbd5e1; font-size:0.9rem; border-collapse:collapse;">
-            <tr><td style="padding:6px; color:#94a3b8; width:140px;">Issuing Body</td>
-                <td style="padding:6px; font-weight:600; color:#60a5fa;">{analysis.get('issuing_body','N/A')}</td></tr>
-            <tr><td style="padding:6px; color:#94a3b8;">Category</td>
-                <td style="padding:6px; font-weight:600;">{analysis.get('topic_category','N/A')}</td></tr>
-            <tr><td style="padding:6px; color:#94a3b8;">Regulation Date</td>
-                <td style="padding:6px;">{analysis.get('regulation_date','Not specified')}</td></tr>
-            <tr><td style="padding:6px; color:#94a3b8;">Sentiment</td>
-                <td style="padding:6px;">{impact_badge(analysis.get('sentiment','Neutral'))}</td></tr>
+          <table style="width:100%; color:#cbd5e1; font-size:1rem; border-collapse:collapse;">
+            <tr style="border-bottom: 1px solid #334155;"><td style="padding:12px; color:#94a3b8; width:160px;">Issuing Body</td>
+                <td style="padding:12px; font-weight:700; color:#60a5fa;">{analysis.get('issuing_body','N/A')}</td></tr>
+            <tr style="border-bottom: 1px solid #334155;"><td style="padding:12px; color:#94a3b8;">Category</td>
+                <td style="padding:12px; font-weight:700; color:#f8fafc;">{analysis.get('topic_category','N/A')}</td></tr>
+            <tr style="border-bottom: 1px solid #334155;"><td style="padding:12px; color:#94a3b8;">Regulation Date</td>
+                <td style="padding:12px; color:#f8fafc;">{analysis.get('regulation_date','Not specified')}</td></tr>
+            <tr><td style="padding:12px; color:#94a3b8;">Sentiment</td>
+                <td style="padding:12px;">{impact_badge(analysis.get('sentiment','Neutral'))}</td></tr>
           </table>
         </div>
         """, unsafe_allow_html=True)
 
     with c2:
-        st.markdown('<div class="card" style="height: 250px;">', unsafe_allow_html=True)
+        st.markdown('<div class="card" style="height: 380px; display: flex; align-items: center; justify-content: center;">', unsafe_allow_html=True)
+        st.markdown('<div class="card-title" style="margin-bottom:0;">⚠️ Compliance Risk Level</div>', unsafe_allow_html=True)
         render_risk_gauge(analysis.get("risk_level", "Medium"))
         st.markdown('</div>', unsafe_allow_html=True)
 
     # Row 2: Summary & Sentiment Chart
     c3, c4 = st.columns([1.5, 1])
     with c3:
-        st.markdown('<div class="card" style="height: 250px; overflow-y: auto;"><div class="card-title">📝 Executive Summary</div>', unsafe_allow_html=True)
-        st.markdown(f'<p style="color:#cbd5e1; line-height:1.6; font-size:0.95rem;">{analysis.get("summary","")}</p>', unsafe_allow_html=True)
+        st.markdown('<div class="card" style="height: 380px; overflow-y: auto;">', unsafe_allow_html=True)
+        st.markdown('<div class="card-title">📝 Executive Summary</div>', unsafe_allow_html=True)
+        st.markdown(f'<p style="color:#cbd5e1; line-height:1.7; font-size:0.95rem;">{analysis.get("summary", analysis.get("executive_summary", ""))}</p>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
     with c4:
-        st.markdown('<div class="card" style="height: 250px;">', unsafe_allow_html=True)
+        st.markdown('<div class="card" style="height: 380px;">', unsafe_allow_html=True)
+        st.markdown('<div class="card-title">📊 Stakeholder Sentiment Map</div>', unsafe_allow_html=True)
         render_impact_chart(analysis.get("stakeholder_impact", {}))
         st.markdown('</div>', unsafe_allow_html=True)
 

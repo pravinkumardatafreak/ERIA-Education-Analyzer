@@ -74,7 +74,7 @@ Return ONLY the following JSON structure with all fields filled accurately:
   "risks": ["Risk 1", "Risk 2", "Risk 3"],
   "opportunities": ["Opportunity 1", "Opportunity 2", "Opportunity 3"],
   "compliance_requirements": ["Requirement 1", "Requirement 2"],
-  "chronology_notes": "Any references to previous circulars, amendments, or historical policies mentioned in the document",
+  "chronology_notes": "A detailed timeline and list of related historical circulars, previous amendments, and foundational policies (e.g., NEP 2020, NPE 1986, AICTE Act 1987) that provide context for this regulation. Even if not explicitly mentioned in the text, use your internal knowledge of the Indian regulatory ecosystem to provide a complete historical background.",
   "sentiment": "Positive | Negative | Neutral | Mixed",
   "risk_level": "Low | Medium | High",
   "key_clauses": ["Important clause 1", "Important clause 2", "Important clause 3"]
