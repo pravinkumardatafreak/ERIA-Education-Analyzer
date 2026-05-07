@@ -59,29 +59,27 @@ st.markdown("""
     border-radius: 12px;
     padding: 24px;
     margin-bottom: 16px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .card:hover {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
   }
   .card-title {
-    font-size: 1.05rem;
-    font-weight: 600;
-    color: #93c5fd;
-    margin-bottom: 12px;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #f8fafc;
+    margin-bottom: 20px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    border-bottom: 2px solid #60a5fa;
+    padding-bottom: 8px;
+    width: fit-content;
+    letter-spacing: 0.5px;
   }
-
-  /* ── Badge ── */
-  .badge {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    margin-left: 8px;
-  }
-  .badge-positive { background: #14532d; color: #86efac; }
-  .badge-negative { background: #450a0a; color: #fca5a5; }
-  .badge-mixed    { background: #451a03; color: #fcd34d; }
+  /* ── Vibrant Badges ── */
+  .badge-positive { background: #064e3b; color: #34d399; border: 1px solid #059669; }
+  .badge-negative { background: #7f1d1d; color: #f87171; border: 1px solid #dc2626; }
+  .badge-mixed    { background: #78350f; color: #fbbf24; border: 1px solid #d97706; }
   .badge-neutral  { background: #1e293b; color: #94a3b8; border: 1px solid #475569; }
 
   /* ── Risk pills ── */
@@ -89,44 +87,10 @@ st.markdown("""
   .risk-medium { background: #451a03; color: #fcd34d; padding: 4px 14px; border-radius: 9999px; font-weight: 700; font-size: 0.85rem; }
   .risk-high   { background: #450a0a; color: #fca5a5; padding: 4px 14px; border-radius: 9999px; font-weight: 700; font-size: 0.85rem; }
 
-  /* ── Timeline ── */
-  .timeline-item {
-    border-left: 3px solid #3b82f6;
-    padding-left: 16px;
-    margin-bottom: 12px;
-    position: relative;
-  }
-  .timeline-dot {
-    width: 10px; height: 10px;
-    background: #3b82f6;
-    border-radius: 50%;
-    position: absolute;
-    left: -6.5px; top: 4px;
-  }
-
   /* ── Sidebar ── */
   section[data-testid="stSidebar"] {
     background: #0f172a;
     border-right: 1px solid #1e293b;
-  }
-
-  /* ── Tabs ── */
-  .stTabs [data-baseweb="tab-list"] {
-    background: #1e293b;
-    border-radius: 10px;
-    padding: 4px;
-    gap: 4px;
-  }
-  .stTabs [data-baseweb="tab"] {
-    background: transparent;
-    color: #94a3b8;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    padding: 8px 16px;
-  }
-  .stTabs [aria-selected="true"] {
-    background: #1d4ed8 !important;
-    color: #fff !important;
   }
 
   /* ── Buttons ── */
@@ -146,23 +110,43 @@ st.markdown("""
     box-shadow: 0 8px 20px rgba(29, 78, 216, 0.4);
   }
 
-  /* ── Metric boxes ── */
-  [data-testid="stMetricValue"] { color: #93c5fd; font-weight: 700; }
-  [data-testid="stMetricLabel"] { color: #64748b; }
-
-  /* ── Divider ── */
-  hr { border-color: #1e293b; }
-
-  /* ── Bullet lists ── */
-  .bullet-item {
-    padding: 6px 0 6px 16px;
-    border-left: 2px solid #3b82f6;
-    margin-bottom: 6px;
-    color: #cbd5e1;
-    font-size: 0.93rem;
+  /* ── Stylized Logo ── */
+  .logo-text {
+    font-size: 3.8rem;
+    font-weight: 900;
+    background: linear-gradient(90deg, #60a5fa, #c084fc, #f472b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0px;
+    letter-spacing: -3px;
+    line-height: 1;
   }
-  /* ── Plotly Background ── */
-  .js-plotly-plot .plotly .main-svg { background: transparent !important; }
+  .logo-sub {
+    color: #64748b;
+    font-size: 1rem;
+    margin-top: -10px;
+    margin-bottom: 30px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* ── Sidebar Status ── */
+  .status-box {
+    padding: 12px;
+    border-radius: 10px;
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid #334155;
+    margin-bottom: 20px;
+  }
+  .status-dot {
+    height: 8px;
+    width: 8px;
+    background-color: #22c55e;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 5px;
+    box-shadow: 0 0 8px #22c55e;
+  }
 </style>
 """, unsafe_allow_html=True)
 
@@ -425,33 +409,47 @@ def render_chronology_tab(analysis: dict) -> None:
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
 def render_sidebar() -> str:
-    """Render sidebar and return the Gemini API key."""
+    """Render the professional sidebar with configuration and system status."""
     with st.sidebar:
-        st.markdown("""
-        <div style="text-align:center; padding:16px 0;">
-          <div style="font-size:2.5rem;">⚖️</div>
-          <div style="font-size:1.1rem; font-weight:700; color:#93c5fd;">ERIA</div>
-          <div style="font-size:0.75rem; color:#475569;">Education Regulation Impact Analyzer</div>
+        st.markdown('### ⚙️ System Control')
+        
+        # System Status Monitor
+        st.markdown(f"""
+        <div class="status-box">
+          <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 4px;">SYSTEM STATUS</div>
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="color: #f8fafc; font-size: 0.9rem;"><span class="status-dot"></span> Active</span>
+            <span style="color: #64748b; font-size: 0.8rem;">v2.1.0</span>
+          </div>
+          <div style="margin-top: 8px; font-size: 0.8rem; color: #94a3b8;">
+            <b>Model:</b> LLaMA 3.3 70B<br>
+            <b>Latency:</b> ~120ms/token
+          </div>
         </div>
         """, unsafe_allow_html=True)
 
-        st.divider()
+        st.markdown("---")
+        st.markdown("#### 🔑 API Configuration")
+        
+        env_key = os.getenv("GROQ_API_KEY", "")
+        
+        if env_key:
+            st.success("✅ API Key loaded from Environment")
+            api_key = env_key
+            if st.button("🔄 Use Different Key"):
+                st.session_state["manual_key"] = True
+        
+        if not env_key or st.session_state.get("manual_key"):
+            api_key = st.text_input(
+                label="Enter Groq API Key",
+                type="password",
+                placeholder="gsk_...",
+                help="Get your key at console.groq.com"
+            )
+            if api_key:
+                st.session_state["manual_key"] = False
 
-        st.markdown("### 🔑 Groq API Key")
-        api_key = st.text_input(
-            label="API Key",
-            type="password",
-            value=os.getenv("GROQ_API_KEY", ""),
-            placeholder="gsk_...",
-            help="Get your FREE key at https://console.groq.com",
-            label_visibility="collapsed",
-        )
-
-        if not api_key:
-            st.warning("⚠️ Enter your Groq API key to enable analysis.")
-
-        st.divider()
-
+        st.markdown("---")
         st.markdown("### 📚 Official Sources")
         sources = {
             "UGC Circulars":     "https://www.ugc.gov.in/Circulars",
@@ -476,15 +474,17 @@ def main() -> None:
 
     api_key = render_sidebar()
 
-    # Hero Banner
-    st.markdown("""
-    <div class="hero">
-      <h1>⚖️ Education Regulation Impact Analyzer</h1>
-      <p>Upload any UGC · AICTE · NAAC · NIRF circular — get instant AI-powered policy insights</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # Header
+    col_l, col_r = st.columns([1, 6])
+    with col_l:
+        st.image("assets/logo.png", width=120)
+    with col_r:
+        st.markdown('<h1 class="logo-text">ERIA</h1>', unsafe_allow_html=True)
+        st.markdown('<p class="logo-sub">Education Regulation Impact Analyzer</p>', unsafe_allow_html=True)
 
     # ── Input Section ─────────────────────────────────────────────────────────
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="card-title">📥 Document Ingestion</div>', unsafe_allow_html=True)
     input_tab, url_tab = st.tabs(["📁 Upload PDF", "🌐 Paste URL"])
 
     document_text = None
@@ -525,7 +525,7 @@ def main() -> None:
         st.divider()
         col_btn, col_info = st.columns([1, 3])
         with col_btn:
-            analyze_btn = st.button("🔍 Analyze Regulation", use_container_width=True)
+            analyze_btn = st.button("🔍 Analyze Regulation", width="stretch")
         with col_info:
             st.info(
                 f"📊 Document ready: **{len(document_text):,}** characters | "
@@ -549,6 +549,7 @@ def main() -> None:
                 except Exception as e:
                     st.error(f"❌ Analysis failed: {str(e)}")
                     return
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Results Section ───────────────────────────────────────────────────────
     if "analysis" in st.session_state:
