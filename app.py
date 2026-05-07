@@ -107,20 +107,22 @@ st.markdown("""
   }
 
   /* ── Buttons ── */
-  .stButton > button {
-    background: linear-gradient(135deg, #1d4ed8, #7c3aed);
-    color: white;
-    border: none;
-    border-radius: 10px;
-    padding: 10px 24px;
-    font-weight: 600;
-    font-size: 0.95rem;
-    transition: transform 0.2s, box-shadow 0.2s;
-    width: 100%;
+  .stButton > button, .stDownloadButton > button {
+    background: linear-gradient(135deg, #3b82f6, #7c3aed) !important;
+    color: white !important;
+    border: none !important;
+    padding: 10px 24px !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    transition: all 0.3s ease !important;
+    width: 100% !important;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3) !important;
   }
-  .stButton > button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(29, 78, 216, 0.4);
+  .stButton > button:hover, .stDownloadButton > button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5) !important;
+    background: linear-gradient(135deg, #60a5fa, #8b5cf6) !important;
   }
 
   /* ── Stylized Logo ── */
@@ -280,13 +282,13 @@ def render_summary_tab(analysis: dict) -> None:
         <div class="card" style="height: 250px; overflow-y: auto;">
           <div class="card-title">📋 Document Overview</div>
           <table style="width:100%; color:#cbd5e1; font-size:0.9rem; border-collapse:collapse;">
-            <tr><td style="padding:6px; color:#64748b; width:140px;">Issuing Body</td>
-                <td style="padding:6px; font-weight:600; color:#93c5fd;">{analysis.get('issuing_body','N/A')}</td></tr>
-            <tr><td style="padding:6px; color:#64748b;">Category</td>
+            <tr><td style="padding:6px; color:#94a3b8; width:140px;">Issuing Body</td>
+                <td style="padding:6px; font-weight:600; color:#60a5fa;">{analysis.get('issuing_body','N/A')}</td></tr>
+            <tr><td style="padding:6px; color:#94a3b8;">Category</td>
                 <td style="padding:6px; font-weight:600;">{analysis.get('topic_category','N/A')}</td></tr>
-            <tr><td style="padding:6px; color:#64748b;">Regulation Date</td>
+            <tr><td style="padding:6px; color:#94a3b8;">Regulation Date</td>
                 <td style="padding:6px;">{analysis.get('regulation_date','Not specified')}</td></tr>
-            <tr><td style="padding:6px; color:#64748b;">Sentiment</td>
+            <tr><td style="padding:6px; color:#94a3b8;">Sentiment</td>
                 <td style="padding:6px;">{impact_badge(analysis.get('sentiment','Neutral'))}</td></tr>
           </table>
         </div>
@@ -575,10 +577,10 @@ def main() -> None:
 
         # Quick metrics
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Issuing Body",    analysis.get("issuing_body", "N/A"))
-        m2.metric("Topic Category",  analysis.get("topic_category", "N/A"))
-        m3.metric("Sentiment",       analysis.get("sentiment", "N/A"))
-        m4.metric("Risk Level",      analysis.get("risk_level", "N/A"))
+        m1.markdown(f"**Issuing Body**<br><span style='color:#60a5fa; font-weight:700;'>{analysis.get('issuing_body', 'N/A')}</span>", unsafe_allow_html=True)
+        m2.markdown(f"**Topic Category**<br><span style='color:#60a5fa; font-weight:700;'>{analysis.get('topic_category', 'N/A')}</span>", unsafe_allow_html=True)
+        m3.markdown(f"**Sentiment**<br><span style='color:#60a5fa; font-weight:700;'>{analysis.get('sentiment', 'N/A')}</span>", unsafe_allow_html=True)
+        m4.markdown(f"**Risk Level**<br><span style='color:#60a5fa; font-weight:700;'>{analysis.get('risk_level', 'N/A')}</span>", unsafe_allow_html=True)
 
         st.divider()
 
