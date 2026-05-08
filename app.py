@@ -491,25 +491,29 @@ def render_sidebar() -> str:
         """, unsafe_allow_html=True)
 
         st.markdown("---")
-        st.markdown("#### 🔑 API Configuration")
-        
         env_key = os.getenv("GROQ_API_KEY", "")
         
-        if env_key:
-            st.success("✅ API Key loaded from Environment")
-            api_key = env_key
-            if st.button("🔄 Use Different Key"):
-                st.session_state["manual_key"] = True
+        if "api_key" not in st.session_state:
+            st.session_state["api_key"] = env_key
+
+        api_key_input = st.text_input(
+            label="Groq API Key",
+            type="password",
+            value=st.session_state["api_key"],
+            placeholder="gsk_...",
+            help="Get your key at console.groq.com"
+        )
         
-        if not env_key or st.session_state.get("manual_key"):
-            api_key = st.text_input(
-                label="Enter Groq API Key",
-                type="password",
-                placeholder="gsk_...",
-                help="Get your key at console.groq.com"
-            )
-            if api_key:
-                st.session_state["manual_key"] = False
+        if api_key_input != st.session_state["api_key"]:
+            st.session_state["api_key"] = api_key_input
+            st.rerun()
+
+        api_key = st.session_state["api_key"]
+
+        if env_key and api_key == env_key:
+            st.success("✅ Using Environment Key")
+        elif api_key:
+            st.info("🔑 Using Custom Key")
 
         st.markdown("---")
         st.markdown("### 📚 Official Sources")
