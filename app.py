@@ -259,8 +259,7 @@ def render_impact_chart(stakeholders: dict) -> None:
 
     fig.update_layout(
         title={'text': "Stakeholder Sentiment Map", 'font': {'size': 16, 'color': '#93c5fd'}},
-        height=250, margin=dict(l=10, r=10, t=40, b=10),
-        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+        height=250,        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
         yaxis=dict(showticklabels=False, range=[-1.2, 1.2], zeroline=True, zerolinecolor="#334155"),
         xaxis=dict(showticklabels=True, tickfont=dict(size=10)),
     )
