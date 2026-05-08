@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+venv/
+env/
+
+# Streamlit (keep config.toml committed)
+# .streamlit/
+
+# Reports
+*.pdf
+
+# IDEs
+.vscode/
+.idea/
