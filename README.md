@@ -1,3 +1,15 @@
+---
+title: ERIA - Education Regulation Impact Analyzer
+emoji: ⚖️
+colorFrom: blue
+colorTo: purple
+sdk: streamlit
+sdk_version: 1.35.0
+app_file: app.py
+pinned: true
+license: mit
+---
+
 # ⚖️ ERIA — Education Regulation Impact Analyzer
 
 > **GUVI Capstone Project** | Domain: EdTech / Education Policy Analytics
