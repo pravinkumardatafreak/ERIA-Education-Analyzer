@@ -268,65 +268,62 @@ def render_impact_chart(stakeholders: dict) -> None:
 
 
 def render_bullet_list(items: list) -> None:
-    """Render a styled bullet list using custom HTML."""
+    """Render a styled bullet list using standard markdown."""
     for item in items:
-        st.markdown(f'<div class="bullet-item">• {item}</div>', unsafe_allow_html=True)
+        st.markdown(f"• {item}")
 
 
 def render_summary_tab(analysis: dict) -> None:
-    """Render the Executive Summary tab."""
-    # Row 1: Document Info & Risk Gauge
-    c1, c2 = st.columns([1, 1.2])
-    with c1:
-        with st.container(border=True):
-            st.markdown('<div class="card-title" style="border-bottom:none;">📋 Document Overview</div>', unsafe_allow_html=True)
-            st.markdown(f"""
-            <table style="width:100%; color:var(--text-color); font-size:1rem; border-collapse:collapse;">
-                <tr style="border-bottom: 1px solid #334155;"><td style="padding:12px; color:#94a3b8; width:160px;">Issuing Body</td>
-                    <td style="padding:12px; font-weight:700; color:#60a5fa;">{analysis.get('issuing_body','N/A')}</td></tr>
-                <tr style="border-bottom: 1px solid #334155;"><td style="padding:12px; color:#94a3b8;">Category</td>
-                    <td style="padding:12px; font-weight:700;">{analysis.get('topic_category','N/A')}</td></tr>
-                <tr style="border-bottom: 1px solid #334155;"><td style="padding:12px; color:#94a3b8;">Regulation Date</td>
-                    <td style="padding:12px;">{analysis.get('regulation_date','Not specified')}</td></tr>
-                <tr><td style="padding:12px; color:#94a3b8;">Sentiment</td>
-                    <td style="padding:12px;">{impact_badge(analysis.get('sentiment','Neutral'))}</td></tr>
-            </table>
-            """, unsafe_allow_html=True)
-
-    with c2:
-        with st.container(border=True):
-            st.markdown('<div class="card-title" style="border-bottom:none;">⚠️ Compliance Risk Level</div>', unsafe_allow_html=True)
-            render_risk_gauge(analysis.get("risk_level", "Medium"))
-
-    # Row 2: Summary & Sentiment Chart
-    c3, c4 = st.columns([1.5, 1])
-    with c3:
-        with st.container(border=True):
-            st.markdown('<div class="card-title" style="border-bottom:none;">📝 Executive Summary</div>', unsafe_allow_html=True)
-            st.write(analysis.get("summary", analysis.get("executive_summary", "No summary available.")))
-
-    with c4:
-        with st.container(border=True):
-            st.markdown('<div class="card-title" style="border-bottom:none;">📊 Stakeholder Sentiment Map</div>', unsafe_allow_html=True)
-            render_impact_chart(analysis.get("stakeholder_impact", {}))
-
-    col1, col2 = st.columns(2)
+    """Render the Executive Summary tab using native Streamlit containers for perfect alignment."""
+    # Row 1: Document Overview & Risk Gauge
+    col1, col2 = st.columns([1, 1])
+    
     with col1:
         with st.container(border=True):
-            st.markdown('<div class="card-title" style="border-bottom:none;">🎯 Purpose</div>', unsafe_allow_html=True)
-            st.write(analysis.get("purpose", "N/A"))
+            st.markdown("### 📋 Document Overview")
+            st.markdown(f"**Issuing Body:** {analysis.get('issuing_body', 'N/A')}")
+            st.markdown(f"**Category:** {analysis.get('topic_category', 'N/A')}")
+            st.markdown(f"**Regulation Date:** {analysis.get('regulation_date', 'Not specified')}")
+            st.markdown(f"**Sentiment:** {analysis.get('sentiment', 'Neutral')}")
 
     with col2:
         with st.container(border=True):
-            st.markdown('<div class="card-title" style="border-bottom:none;">🕰️ Historical Background</div>', unsafe_allow_html=True)
+            st.markdown("### ⚠️ Compliance Risk")
+            render_risk_gauge(analysis.get("risk_level", "Medium"))
+
+    # Row 2: Executive Summary & Sentiment Chart
+    col3, col4 = st.columns([1.2, 1])
+    
+    with col3:
+        with st.container(border=True):
+            st.markdown("### 📝 Executive Summary")
+            st.write(analysis.get("summary", analysis.get("executive_summary", "No summary available.")))
+
+    with col4:
+        with st.container(border=True):
+            st.markdown("### 📊 Stakeholder Sentiment")
+            render_impact_chart(analysis.get("stakeholder_impact", {}))
+
+    # Row 3: Purpose & Background
+    col5, col6 = st.columns(2)
+    with col5:
+        with st.container(border=True):
+            st.markdown("### 🎯 Purpose")
+            st.write(analysis.get("purpose", "N/A"))
+
+    with col6:
+        with st.container(border=True):
+            st.markdown("### 🕰️ Historical Background")
             st.write(analysis.get("background", "N/A"))
 
-
+    # Key Clauses
     key_clauses = analysis.get("key_clauses", [])
     if key_clauses:
-        st.markdown('<div class="card"><div class="card-title">📌 Key Clauses</div>', unsafe_allow_html=True)
-        render_bullet_list(key_clauses)
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown("### 📌 Key Clauses")
+            for clause in key_clauses:
+                st.markdown(f"• {clause}")
+
 
 
 def render_stakeholder_tab(analysis: dict) -> None:
