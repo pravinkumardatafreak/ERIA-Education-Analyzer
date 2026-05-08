@@ -423,6 +423,55 @@ def render_chronology_tab(analysis: dict) -> None:
     st.markdown('</div>', unsafe_allow_html=True)
 
 
+def render_strategic_tab(analysis: dict) -> None:
+    """Render the Strategic Framework tab based on OECD ERIA standards."""
+    ef = analysis.get("execution_framework", {})
+    
+    # 1. Visual Execution Framework
+    st.markdown("#### 🚀 Step-by-Step Execution Framework")
+    steps = [
+        ("1. Problem Definition", ef.get("problem_definition", "N/A")),
+        ("2. Stakeholder Mapping", ef.get("stakeholder_mapping", "N/A")),
+        ("3. Cost-Benefit Analysis", ef.get("cost_benefit_analysis", "N/A")),
+        ("4. Risk & Enforcement", ef.get("risk_assessment", "N/A"))
+    ]
+    
+    # Simple flexbox progress bar
+    cols = st.columns(4)
+    for col, (title, desc) in zip(cols, steps):
+        with col:
+            st.markdown(f"""
+            <div style="background: var(--secondary-background-color, #1e293b); padding: 15px; border-radius: 8px; border-left: 4px solid #60a5fa; min-height: 200px;">
+              <b style="color: #60a5fa; font-size: 0.9rem;">{title}</b><br>
+              <p style="font-size: 0.85rem; color: var(--text-color); margin-top: 8px; line-height:1.4;">{desc}</p>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    st.divider()
+    
+    # 2. Core Analytical Components
+    st.markdown("#### ⚖️ Core Analytical Dimensions")
+    c1, c2 = st.columns(2)
+    
+    with c1:
+        with st.container(border=True):
+            st.markdown('<div class="card-title" style="border-bottom:none;">💼 Compliance Burden</div>', unsafe_allow_html=True)
+            st.write(analysis.get("compliance_burden", "N/A"))
+        
+        with st.container(border=True):
+            st.markdown('<div class="card-title" style="border-bottom:none;">💰 Fiscal Metrics</div>', unsafe_allow_html=True)
+            st.write(analysis.get("fiscal_metrics", "N/A"))
+
+    with c2:
+        with st.container(border=True):
+            st.markdown('<div class="card-title" style="border-bottom:none;">🌈 Equity Metrics</div>', unsafe_allow_html=True)
+            st.write(analysis.get("equity_metrics", "N/A"))
+            
+        with st.container(border=True):
+            st.markdown('<div class="card-title" style="border-bottom:none;">🎓 Academic Quality</div>', unsafe_allow_html=True)
+            st.write(analysis.get("academic_quality", "N/A"))
+
+
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
 def render_sidebar() -> str:
@@ -586,13 +635,15 @@ def main() -> None:
         st.divider()
 
         # Result tabs
-        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
             "📋 Summary",
             "👥 Stakeholder Impact",
             "📈 Impact Assessment",
             "⚠️ Risks & Opportunities",
             "🕰️ Chronology",
+            "🎯 Strategic Framework"
         ])
+
 
         with tab1:
             render_summary_tab(analysis)
@@ -608,6 +659,9 @@ def main() -> None:
 
         with tab5:
             render_chronology_tab(analysis)
+
+        with tab6:
+            render_strategic_tab(analysis)
 
         # ── Download Report ───────────────────────────────────────────────────
         st.divider()
