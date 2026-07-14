@@ -8,6 +8,8 @@ import json
 import re
 from groq import Groq
 
+from modules.document_processor import retrieve_relevant_chunks
+from modules.emotion_analyzer import detect_emotion
 
 # Best free model on Groq — fast, accurate, large context
 GROQ_MODEL = "llama-3.3-70b-versatile"
@@ -96,9 +98,10 @@ Return ONLY the following JSON structure with all fields filled accurately:
 def analyze_document(document_text: str, api_key: str) -> dict:
     """
     Send document text to Groq API and return structured analysis.
+    Uses TF-IDF chunk retrieval to reduce context window size.
 
     Args:
-        document_text: Extracted text from the regulation document
+        document_text: Extracted full text from the regulation document
         api_key: Groq API key (starts with gsk_...)
 
     Returns:
@@ -106,7 +109,11 @@ def analyze_document(document_text: str, api_key: str) -> dict:
     """
     client = Groq(api_key=api_key)
 
-    system_prompt, user_prompt = build_analysis_prompt(document_text)
+    # 1. Token Reduction (RAG) - Only get chunks relevant to the schema
+    search_query = "students faculty institutions administrators accreditation compliance short_term positives negatives risks opportunities equity"
+    relevant_text = retrieve_relevant_chunks(document_text, query=search_query, top_k=4, chunk_size=1000)
+
+    system_prompt, user_prompt = build_analysis_prompt(relevant_text)
 
     response = client.chat.completions.create(
         model=GROQ_MODEL,
@@ -120,7 +127,17 @@ def analyze_document(document_text: str, api_key: str) -> dict:
     )
 
     raw_output = response.choices[0].message.content.strip()
-    return parse_llm_response(raw_output)
+    parsed_data = parse_llm_response(raw_output)
+
+    # 2. Multi-Model Orchestration (Emotion Detection)
+    if "stakeholder_impact" in parsed_data:
+        for stakeholder in ["students", "faculty"]:
+            if stakeholder in parsed_data["stakeholder_impact"]:
+                details = parsed_data["stakeholder_impact"][stakeholder].get("details", "")
+                emotion = detect_emotion(details)
+                parsed_data["stakeholder_impact"][stakeholder]["emotion"] = emotion.capitalize()
+
+    return parsed_data
 
 
 def parse_llm_response(raw_output: str) -> dict:

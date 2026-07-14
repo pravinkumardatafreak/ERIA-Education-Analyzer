@@ -11,18 +11,19 @@ import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime
+from pathlib import Path
 from dotenv import load_dotenv
 
 from modules.document_processor import (
     extract_text_from_pdf,
-    extract_text_from_url,
-    truncate_text,
+    extract_text_from_url
 )
 from modules.llm_analyzer import analyze_document, GROQ_MODEL
 from modules.report_generator import generate_pdf_report
 
 # ── Load environment variables ────────────────────────────────────────────────
-load_dotenv()
+APP_DIR = Path(__file__).resolve().parent
+load_dotenv(dotenv_path=APP_DIR / ".env", override=False)
 
 # ── Page Configuration ────────────────────────────────────────────────────────
 st.set_page_config(
@@ -64,6 +65,20 @@ st.markdown("""
   .card:hover {
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
   }
+  /* Streamlit native bordered containers (st.container(border=True)) */
+  div[data-testid="stVerticalBlockBorderWrapper"] {
+    background: var(--secondary-background-color, #1e293b);
+    border: 1px solid var(--border-color, #334155) !important;
+    border-radius: 12px !important;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 14px rgba(2, 6, 23, 0.25);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.35);
+    border-color: #475569 !important;
+  }
   .card-title {
     font-size: 1.15rem;
     font-weight: 800;
@@ -86,6 +101,12 @@ st.markdown("""
   .risk-low    { background: #14532d; color: #86efac; padding: 4px 14px; border-radius: 9999px; font-weight: 700; font-size: 0.85rem; }
   .risk-medium { background: #451a03; color: #fcd34d; padding: 4px 14px; border-radius: 9999px; font-weight: 700; font-size: 0.85rem; }
   .risk-high   { background: #450a0a; color: #fca5a5; padding: 4px 14px; border-radius: 9999px; font-weight: 700; font-size: 0.85rem; }
+
+  /* ── Emotion Badges ── */
+  .emotion-badge {
+    background: #312e81; color: #c7d2fe; border: 1px solid #4f46e5;
+    padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; margin-left: 10px; font-weight: 600;
+  }
 
   /* ── Sidebar ── */
   section[data-testid="stSidebar"] {
@@ -336,13 +357,37 @@ def render_stakeholder_tab(analysis: dict) -> None:
         "accreditation_teams": ("✅", "Accreditation Teams"),
     }
 
+    # Professional business-standard emotion icons
+    emotion_icons = {
+        "joy": "🌟",
+        "sadness": "📉",
+        "anger": "⚠️",
+        "fear": "🛡️",
+        "surprise": "🔔",
+        "disgust": "🚫",
+        "neutral": "📊"
+    }
+
     for key, (icon, label) in icons.items():
         data = stakeholders.get(key, {})
         level = data.get("impact_level", "Neutral")
         details = data.get("details", "No details available.")
+        emotion = data.get("emotion", "").lower()
+        
+        emotion_html = ""
+        if emotion:
+            e_icon = emotion_icons.get(emotion, "📊")
+            
+            emotion_html = f"""
+            <div style="display:inline-flex; align-items:center; background: #1e293b; color: #94a3b8; border: 1px solid #475569; padding: 4px 12px; border-radius: 16px; font-size: 0.8rem; margin-left: 10px; font-weight: 500; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                <span style="font-size: 0.9rem;">{e_icon}</span>
+                <span style="text-transform: capitalize; letter-spacing: 0.5px;">{emotion}</span>
+            </div>
+            """
+        
         st.markdown(f"""
         <div class="card">
-          <div class="card-title">{icon} {label} {impact_badge(level)}</div>
+          <div class="card-title" style="align-items:center;">{icon} {label} {impact_badge(level)} {emotion_html}</div>
           <p style="color:#cbd5e1; line-height:1.7; margin:0;">{details}</p>
         </div>
         """, unsafe_allow_html=True)
@@ -362,14 +407,16 @@ def render_impact_tab(analysis: dict) -> None:
     for col, (key, title, period, color) in zip(cols, config):
         with col:
             items = impact.get(key, [])
-            st.markdown(f"""
-            <div class="card" style="border-top: 3px solid {color};">
-              <div class="card-title" style="color:{color};">{title}</div>
-              <div style="color:#64748b; font-size:0.8rem; margin-bottom:12px;">{period}</div>
-            """, unsafe_allow_html=True)
-            for item in items:
-                st.markdown(f'<div class="bullet-item">• {item}</div>', unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+            with st.container(border=True):
+                st.markdown(f'<div class="card-title" style="color:{color}; border-bottom:none;">{title}</div>',
+                            unsafe_allow_html=True)
+                st.markdown(f'<div style="color:#64748b; font-size:0.8rem; margin-bottom:12px;">{period}</div>',
+                            unsafe_allow_html=True)
+                if items:
+                    for item in items:
+                        st.markdown(f"• {item}")
+                else:
+                    st.markdown("• No impact details available.")
 
 
 def render_risks_tab(analysis: dict) -> None:
@@ -377,46 +424,49 @@ def render_risks_tab(analysis: dict) -> None:
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown('<div class="card" style="border-top:3px solid #22c55e;">'
-                    '<div class="card-title" style="color:#22c55e;">✅ Positives</div>', unsafe_allow_html=True)
-        render_bullet_list(analysis.get("positives", []))
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="card-title" style="color:#22c55e; border-bottom:none;">✅ Positives</div>',
+                        unsafe_allow_html=True)
+            render_bullet_list(analysis.get("positives", []))
 
-        st.markdown('<div class="card" style="border-top:3px solid #3b82f6;">'
-                    '<div class="card-title" style="color:#93c5fd;">🚀 Opportunities</div>', unsafe_allow_html=True)
-        render_bullet_list(analysis.get("opportunities", []))
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="card-title" style="color:#93c5fd; border-bottom:none;">🚀 Opportunities</div>',
+                        unsafe_allow_html=True)
+            render_bullet_list(analysis.get("opportunities", []))
 
     with col2:
-        st.markdown('<div class="card" style="border-top:3px solid #ef4444;">'
-                    '<div class="card-title" style="color:#fca5a5;">❌ Negatives</div>', unsafe_allow_html=True)
-        render_bullet_list(analysis.get("negatives", []))
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="card-title" style="color:#fca5a5; border-bottom:none;">❌ Negatives</div>',
+                        unsafe_allow_html=True)
+            render_bullet_list(analysis.get("negatives", []))
 
-        st.markdown('<div class="card" style="border-top:3px solid #f59e0b;">'
-                    '<div class="card-title" style="color:#fcd34d;">⚠️ Risks</div>', unsafe_allow_html=True)
-        render_bullet_list(analysis.get("risks", []))
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="card-title" style="color:#fcd34d; border-bottom:none;">⚠️ Risks</div>',
+                        unsafe_allow_html=True)
+            render_bullet_list(analysis.get("risks", []))
 
     compliance = analysis.get("compliance_requirements", [])
     if compliance:
-        st.markdown('<div class="card">'
-                    '<div class="card-title">📋 Compliance Requirements</div>', unsafe_allow_html=True)
-        render_bullet_list(compliance)
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="card-title" style="border-bottom:none;">📋 Compliance Requirements</div>',
+                        unsafe_allow_html=True)
+            render_bullet_list(compliance)
 
 
 def render_chronology_tab(analysis: dict) -> None:
     """Render the Chronology & Policy History tab."""
     notes = analysis.get("chronology_notes", "")
     
-    st.markdown('<div class="card"><div class="card-title">🕰️ Policy Chronology & History</div>', unsafe_allow_html=True)
-    if notes:
-        st.markdown(notes) # Use standard markdown to render links properly
-    else:
-        st.markdown('<p style="color:#94a3b8;">No specific chronology information was found, but this regulation aligns with <b>NEP 2020</b> and standard UGC regulatory frameworks.</p>',
+    with st.container(border=True):
+        st.markdown('<div class="card-title" style="border-bottom:none;">🕰️ Policy Chronology & History</div>',
                     unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+        if notes:
+            st.markdown(notes)  # Use standard markdown to render links properly
+        else:
+            st.markdown(
+                '<p style="color:#94a3b8;">No specific chronology information was found, but this regulation aligns with <b>NEP 2020</b> and standard UGC regulatory frameworks.</p>',
+                unsafe_allow_html=True
+            )
 
 
 def render_strategic_tab(analysis: dict) -> None:
@@ -491,29 +541,23 @@ def render_sidebar() -> str:
         """, unsafe_allow_html=True)
 
         st.markdown("---")
-        env_key = os.getenv("GROQ_API_KEY", "")
+        st.markdown("#### 🔑 API Configuration")
         
-        if "api_key" not in st.session_state:
-            st.session_state["api_key"] = env_key
-
-        api_key_input = st.text_input(
-            label="Groq API Key",
-            type="password",
-            value=st.session_state["api_key"],
-            placeholder="gsk_...",
-            help="Get your key at console.groq.com"
-        )
+        env_key = get_api_key()
         
-        if api_key_input != st.session_state["api_key"]:
-            st.session_state["api_key"] = api_key_input
-            st.rerun()
-
-        api_key = st.session_state["api_key"]
-
-        if env_key and api_key == env_key:
-            st.success("✅ Using Environment Key")
-        elif api_key:
-            st.info("🔑 Using Custom Key")
+        if env_key:
+            # Always prioritize environment key when available.
+            # This prevents sticky session flags from forcing manual input.
+            st.session_state["manual_key"] = False
+            st.success("✅ API Key loaded from Environment")
+            api_key = env_key
+        else:
+            api_key = st.text_input(
+                label="Enter Groq API Key",
+                type="password",
+                placeholder="gsk_...",
+                help="Get your key at console.groq.com"
+            )
 
         st.markdown("---")
         st.markdown("### 📚 Official Sources")
@@ -533,6 +577,30 @@ def render_sidebar() -> str:
     return api_key
 
 
+def get_api_key() -> str:
+    """Return API key from env or Streamlit secrets."""
+    # 1) Standard environment variable
+    env_key = os.getenv("GROQ_API_KEY", "").strip()
+    if env_key:
+        return env_key
+
+    # 2) Common alternate variable names
+    for var_name in ("GROQ_KEY", "API_KEY"):
+        alt_key = os.getenv(var_name, "").strip()
+        if alt_key:
+            return alt_key
+
+    # 3) Streamlit secrets fallback
+    try:
+        secret_key = str(st.secrets.get("GROQ_API_KEY", "")).strip()
+        if secret_key:
+            return secret_key
+    except Exception:
+        pass
+
+    return ""
+
+
 # ── Main App ──────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -549,73 +617,71 @@ def main() -> None:
         st.markdown('<p class="logo-sub">Education Regulation Impact Analyzer</p>', unsafe_allow_html=True)
 
     # ── Input Section ─────────────────────────────────────────────────────────
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown('<div class="card-title">📥 Document Ingestion</div>', unsafe_allow_html=True)
-    input_tab, url_tab = st.tabs(["📁 Upload PDF", "🌐 Paste URL"])
+    with st.container(border=True):
+        st.markdown('<div class="card-title" style="border-bottom:none;">📥 Document Ingestion</div>',
+                    unsafe_allow_html=True)
+        input_tab, url_tab = st.tabs(["📁 Upload PDF", "🌐 Paste URL"])
 
-    document_text = None
-    source_label = ""
+        document_text = None
+        source_label = ""
 
-    with input_tab:
-        uploaded_file = st.file_uploader(
-            "Drop your PDF regulation document here",
-            type=["pdf"],
-            help="Upload any UGC, AICTE, NAAC, NIRF, or Ministry of Education PDF",
-        )
-        if uploaded_file:
-            source_label = uploaded_file.name
-            with st.spinner("📄 Extracting text from PDF..."):
-                try:
-                    document_text = extract_text_from_pdf(uploaded_file)
-                    st.success(f"✅ Extracted {len(document_text):,} characters from **{uploaded_file.name}**")
-                except ValueError as e:
-                    st.error(str(e))
-
-    with url_tab:
-        url_input = st.text_input(
-            "Enter the URL of an education regulation page or PDF",
-            placeholder="https://www.ugc.gov.in/Circulars/...",
-        )
-        fetch_btn = st.button("🌐 Fetch & Analyze URL")
-        if fetch_btn and url_input:
-            source_label = url_input
-            with st.spinner("🌐 Fetching content from URL..."):
-                try:
-                    document_text = extract_text_from_url(url_input)
-                    st.success(f"✅ Fetched {len(document_text):,} characters from URL.")
-                except ValueError as e:
-                    st.error(str(e))
-
-    # ── Analyze Button ────────────────────────────────────────────────────────
-    if document_text:
-        st.divider()
-        col_btn, col_info = st.columns([1, 3])
-        with col_btn:
-            analyze_btn = st.button("🔍 Analyze Regulation", width="stretch")
-        with col_info:
-            st.info(
-                f"📊 Document ready: **{len(document_text):,}** characters | "
-                f"Model: **{GROQ_MODEL}**"
+        with input_tab:
+            uploaded_file = st.file_uploader(
+                "Drop your PDF regulation document here",
+                type=["pdf"],
+                help="Upload any UGC, AICTE, NAAC, NIRF, or Ministry of Education PDF",
             )
+            if uploaded_file:
+                source_label = uploaded_file.name
+                with st.spinner("📄 Extracting text from PDF..."):
+                    try:
+                        document_text = extract_text_from_pdf(uploaded_file)
+                        st.success(f"✅ Extracted {len(document_text):,} characters from **{uploaded_file.name}**")
+                    except ValueError as e:
+                        st.error(str(e))
 
-        if analyze_btn:
-            if not api_key:
-                st.error("❌ Please enter your Groq API key in the sidebar.")
-                return
+        with url_tab:
+            url_input = st.text_input(
+                "Enter the URL of an education regulation page or PDF",
+                placeholder="https://www.ugc.gov.in/Circulars/...",
+            )
+            fetch_btn = st.button("🌐 Fetch & Analyze URL")
+            if fetch_btn and url_input:
+                source_label = url_input
+                with st.spinner("🌐 Fetching content from URL..."):
+                    try:
+                        document_text = extract_text_from_url(url_input)
+                        st.success(f"✅ Fetched {len(document_text):,} characters from URL.")
+                    except ValueError as e:
+                        st.error(str(e))
 
-            # Truncate to fit LLM context
-            truncated_text = truncate_text(document_text, max_chars=12000)
+        # ── Analyze Button ────────────────────────────────────────────────────
+        if document_text:
+            st.divider()
+            col_btn, col_info = st.columns([1, 3])
+            with col_btn:
+                analyze_btn = st.button("🔍 Analyze Regulation", width="stretch")
+            with col_info:
+                st.info(
+                    f"📊 Document ready: **{len(document_text):,}** characters | "
+                    f"Model: **{GROQ_MODEL}**"
+                )
 
-            with st.spinner("🤖 Analyzing regulation with Groq LLaMA 3.3 70B... (this may take 10–20 seconds)"):
-                try:
-                    analysis = analyze_document(truncated_text, api_key)
-                    st.session_state["analysis"] = analysis
-                    st.session_state["source_label"] = source_label
-                    st.success("✅ Analysis complete!")
-                except Exception as e:
-                    st.error(f"❌ Analysis failed: {str(e)}")
+            if analyze_btn:
+                if not api_key:
+                    st.error("❌ Please enter your Groq API key in the sidebar.")
                     return
-    st.markdown('</div>', unsafe_allow_html=True)
+
+                with st.spinner("🤖 Analyzing regulation with Groq LLaMA 3.3 70B & HF Emotion Model... (this may take 10–20 seconds)"):
+                    try:
+                        # analyze_document now handles RAG chunking and Emotion Detection internally
+                        analysis = analyze_document(document_text, api_key)
+                        st.session_state["analysis"] = analysis
+                        st.session_state["source_label"] = source_label
+                        st.success("✅ Analysis complete!")
+                    except Exception as e:
+                        st.error(f"❌ Analysis failed: {str(e)}")
+                        return
 
     # ── Results Section ───────────────────────────────────────────────────────
     if "analysis" in st.session_state:

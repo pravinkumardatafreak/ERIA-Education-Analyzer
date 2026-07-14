@@ -8,6 +8,9 @@ import re
 import requests
 from bs4 import BeautifulSoup
 import pdfplumber
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 
 def extract_text_from_pdf(uploaded_file) -> str:
@@ -101,8 +104,66 @@ def clean_text(text: str) -> str:
     return text.strip()
 
 
-def truncate_text(text: str, max_chars: int = 12000) -> str:
-    """Truncate text to fit within LLM token limits."""
-    if len(text) <= max_chars:
-        return text
-    return text[:max_chars] + "\n\n[... Document truncated for processing ...]"
+def chunk_text_with_overlap(text: str, chunk_size: int = 1500, overlap: int = 200) -> list:
+    """Split text into overlapping chunks (by words) to preserve context boundaries."""
+    if not text:
+        return []
+    
+    words = text.split()
+    chunks = []
+    
+    if len(words) <= chunk_size:
+        return [text]
+        
+    for i in range(0, len(words), chunk_size - overlap):
+        chunk = " ".join(words[i:i + chunk_size])
+        chunks.append(chunk)
+        if i + chunk_size >= len(words):
+            break
+            
+    return chunks
+
+
+def retrieve_relevant_chunks(text: str, query: str, top_k: int = 3, chunk_size: int = 1000, overlap: int = 150) -> str:
+    """
+    Chunks the document and retrieves the most relevant chunks using TF-IDF cosine similarity.
+    This acts as a lightweight, in-memory RAG pipeline to drastically reduce LLM token usage.
+    
+    Args:
+        text (str): Full document text.
+        query (str): Keywords representing what we are looking for (e.g. 'students impact').
+        top_k (int): Number of chunks to retrieve.
+        
+    Returns:
+        str: Concatenated relevant chunks.
+    """
+    chunks = chunk_text_with_overlap(text, chunk_size=chunk_size, overlap=overlap)
+    
+    # If the document is small enough, return it fully
+    if len(chunks) <= top_k:
+        return "\n\n...\n\n".join(chunks)
+        
+    try:
+        vectorizer = TfidfVectorizer(stop_words='english')
+        # We append query to fit_transform so its vocabulary is included
+        all_docs = chunks + [query]
+        
+        tfidf_matrix = vectorizer.fit_transform(all_docs)
+        chunk_vectors = tfidf_matrix[:-1]
+        query_vector = tfidf_matrix[-1]
+        
+        similarities = cosine_similarity(query_vector, chunk_vectors).flatten()
+        
+        # Get top k indices, sorted by highest similarity
+        top_indices = similarities.argsort()[-top_k:][::-1]
+        
+        # Sort indices ascending to maintain chronological document order
+        top_indices = sorted(top_indices)
+        
+        relevant_chunks = [chunks[i] for i in top_indices]
+        return "\n\n... [Skipped Irrelevant Content] ...\n\n".join(relevant_chunks)
+        
+    except Exception as e:
+        print(f"Retrieval error: {e}")
+        # Fallback to naive truncation
+        return text[:12000]
