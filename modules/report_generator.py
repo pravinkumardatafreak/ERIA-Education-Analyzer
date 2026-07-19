@@ -240,6 +240,30 @@ def generate_pdf_report(analysis: dict) -> bytes:
         pdf.section_title("Chronology & Policy History")
         pdf.body_text(chronology)
 
+    # ── Strategic Recommendations ────────────────────────────────────────────
+    strategy = analysis.get("strategic_recommendations")
+    if strategy:
+        pdf.section_title("Strategic Recommendations")
+        outlook = strategy.get("opportunity_outlook", "N/A")
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_text_color(30, 58, 138)
+        pdf.cell(0, 6, f"Opportunity Outlook: {outlook}", new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(2)
+
+        edtech_ops = strategy.get("edtech_business_opportunities", [])
+        if edtech_ops:
+            pdf.set_font("Helvetica", "B", 10)
+            pdf.set_text_color(30, 58, 138)
+            pdf.cell(0, 6, "EdTech Business Opportunities:", new_x="LMARGIN", new_y="NEXT")
+            pdf.bullet_list(edtech_ops)
+
+        gov_guidance = strategy.get("government_ai_guidance", [])
+        if gov_guidance:
+            pdf.set_font("Helvetica", "B", 10)
+            pdf.set_text_color(30, 58, 138)
+            pdf.cell(0, 6, "Government AI Guidance:", new_x="LMARGIN", new_y="NEXT")
+            pdf.bullet_list(gov_guidance)
+
     # ── Output as bytes ──────────────────────────────────────────────────────
     pdf_output = pdf.output()
     return bytes(pdf_output)

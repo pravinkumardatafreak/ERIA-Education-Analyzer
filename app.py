@@ -9,7 +9,6 @@ Standard: PEP 8
 import os
 import streamlit as st
 import plotly.graph_objects as go
-import plotly.express as px
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
@@ -345,7 +344,6 @@ def render_summary_tab(analysis: dict) -> None:
                 st.markdown(f"• {clause}")
 
 
-
 def render_stakeholder_tab(analysis: dict) -> None:
     """Render the Stakeholder Impact tab."""
     stakeholders = analysis.get("stakeholder_impact", {})
@@ -517,21 +515,41 @@ def render_strategic_tab(analysis: dict) -> None:
             st.markdown('<div class="card-title" style="border-bottom:none;">🎓 Academic Quality</div>', unsafe_allow_html=True)
             st.write(analysis.get("academic_quality", "N/A"))
 
+    # 3. Agentic Strategist output — EdTech opportunities & government AI guidance
+    strategy = analysis.get("strategic_recommendations")
+    if strategy:
+        st.divider()
+        outlook = strategy.get("opportunity_outlook", "N/A")
+        st.markdown(f"#### 🧭 Strategic Recommendations &nbsp;·&nbsp; Outlook: **{outlook}**")
+        s1, s2 = st.columns(2)
+
+        with s1:
+            with st.container(border=True):
+                st.markdown('<div class="card-title" style="border-bottom:none;">🚀 EdTech Business Opportunities</div>', unsafe_allow_html=True)
+                for item in strategy.get("edtech_business_opportunities", []):
+                    st.markdown(f"- {item}")
+
+        with s2:
+            with st.container(border=True):
+                st.markdown('<div class="card-title" style="border-bottom:none;">🏛️ Government AI Guidance</div>', unsafe_allow_html=True)
+                for item in strategy.get("government_ai_guidance", []):
+                    st.markdown(f"- {item}")
+
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
-def render_sidebar() -> str:
+def render_sidebar() -> tuple:
     """Render the professional sidebar with configuration and system status."""
     with st.sidebar:
         st.markdown('### ⚙️ System Control')
         
         # System Status Monitor
-        st.markdown(f"""
+        st.markdown("""
         <div class="status-box">
           <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 4px;">SYSTEM STATUS</div>
           <div style="display: flex; align-items: center; justify-content: space-between;">
             <span style="color: #f8fafc; font-size: 0.9rem;"><span class="status-dot"></span> Active</span>
-            <span style="color: #64748b; font-size: 0.8rem;">v2.1.0</span>
+            <span style="color: #64748b; font-size: 0.8rem;">v2.2.0</span>
           </div>
           <div style="margin-top: 8px; font-size: 0.8rem; color: #94a3b8;">
             <b>Model:</b> LLaMA 3.3 70B<br>
@@ -560,6 +578,16 @@ def render_sidebar() -> str:
             )
 
         st.markdown("---")
+        st.markdown("#### 🤖 Agent Settings")
+        max_refine_rounds = st.slider(
+            label="Max Refinement Rounds",
+            min_value=1,
+            max_value=3,
+            value=1,
+            help="The maximum number of times the Critic and Refiner agents can iterate to self-correct issues."
+        )
+
+        st.markdown("---")
         st.markdown("### 📚 Official Sources")
         sources = {
             "UGC Circulars":     "https://www.ugc.gov.in/Circulars",
@@ -574,7 +602,7 @@ def render_sidebar() -> str:
         st.markdown('<div style="font-size:0.75rem; color:#475569; text-align:center;">Powered by Groq · LLaMA 3.3 70B</div>',
                     unsafe_allow_html=True)
 
-    return api_key
+    return api_key, max_refine_rounds
 
 
 def get_api_key() -> str:
@@ -606,7 +634,7 @@ def get_api_key() -> str:
 def main() -> None:
     """Main application entry point."""
 
-    api_key = render_sidebar()
+    api_key, max_refine_rounds = render_sidebar()
 
     # Header
     col_l, col_r = st.columns([1, 6])
@@ -634,26 +662,34 @@ def main() -> None:
             if uploaded_file:
                 source_label = uploaded_file.name
                 with st.spinner("📄 Extracting text from PDF..."):
-                    try:
-                        document_text = extract_text_from_pdf(uploaded_file)
-                        st.success(f"✅ Extracted {len(document_text):,} characters from **{uploaded_file.name}**")
-                    except ValueError as e:
-                        st.error(str(e))
+                     try:
+                         document_text = extract_text_from_pdf(uploaded_file)
+                         st.success(f"✅ Extracted {len(document_text):,} characters from **{uploaded_file.name}**")
+                     except ValueError as e:
+                         st.error(str(e))
 
         with url_tab:
             url_input = st.text_input(
                 "Enter the URL of an education regulation page or PDF",
                 placeholder="https://www.ugc.gov.in/Circulars/...",
             )
-            fetch_btn = st.button("🌐 Fetch & Analyze URL")
+            fetch_btn = st.button("🌐 Fetch URL Content")
+            
+            # Fetch on button click and persist to session state
             if fetch_btn and url_input:
-                source_label = url_input
                 with st.spinner("🌐 Fetching content from URL..."):
-                    try:
-                        document_text = extract_text_from_url(url_input)
-                        st.success(f"✅ Fetched {len(document_text):,} characters from URL.")
-                    except ValueError as e:
-                        st.error(str(e))
+                     try:
+                         text = extract_text_from_url(url_input)
+                         st.session_state["url_doc_text"] = text
+                         st.session_state["url_doc_label"] = url_input
+                         st.success(f"✅ Fetched {len(text):,} characters from URL.")
+                     except ValueError as e:
+                         st.error(str(e))
+            
+            # Use persisted URL text if it matches the current input
+            if url_input and st.session_state.get("url_doc_label") == url_input:
+                document_text = st.session_state.get("url_doc_text")
+                source_label = url_input
 
         # ── Analyze Button ────────────────────────────────────────────────────
         if document_text:
@@ -673,15 +709,15 @@ def main() -> None:
                     return
 
                 with st.spinner("🤖 Analyzing regulation with Groq LLaMA 3.3 70B & HF Emotion Model... (this may take 10–20 seconds)"):
-                    try:
-                        # analyze_document now handles RAG chunking and Emotion Detection internally
-                        analysis = analyze_document(document_text, api_key)
-                        st.session_state["analysis"] = analysis
-                        st.session_state["source_label"] = source_label
-                        st.success("✅ Analysis complete!")
-                    except Exception as e:
-                        st.error(f"❌ Analysis failed: {str(e)}")
-                        return
+                     try:
+                         # analyze_document handles RAG chunking and self-correction internally
+                         analysis = analyze_document(document_text, api_key, max_refine_rounds=max_refine_rounds)
+                         st.session_state["analysis"] = analysis
+                         st.session_state["source_label"] = source_label
+                         st.success("✅ Analysis complete!")
+                     except Exception as e:
+                         st.error(f"❌ Analysis failed: {str(e)}")
+                         return
 
     # ── Results Section ───────────────────────────────────────────────────────
     if "analysis" in st.session_state:
@@ -710,7 +746,6 @@ def main() -> None:
             "🎯 Strategic Framework"
         ])
 
-
         with tab1:
             render_summary_tab(analysis)
 
@@ -728,6 +763,23 @@ def main() -> None:
 
         with tab6:
             render_strategic_tab(analysis)
+
+        # ── Agent Reasoning Trace ─────────────────────────────────────────────
+        trace = analysis.get("_agent_trace", [])
+        if trace:
+            st.divider()
+            with st.expander("🤖 Agent Reasoning Trace — how the AI checked its own work", expanded=False):
+                for i, step in enumerate(trace, 1):
+                    st.markdown(f"**{i}. {step.get('agent', '?')}** — {step.get('note', '')}")
+                    metrics = step.get("metrics")
+                    if metrics and metrics.get("grounding") is not None:
+                        st.markdown(
+                            f"&nbsp;&nbsp;&nbsp;&nbsp;*LLM-as-a-Judge Scores: Grounding **{metrics.get('grounding')}/10** | "
+                            f"Consistency **{metrics.get('consistency')}/10** | "
+                            f"Completeness **{metrics.get('completeness')}/10***"
+                        )
+                    for issue in step.get("issues", []):
+                        st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;⚠️ {issue}")
 
         # ── Download Report ───────────────────────────────────────────────────
         st.divider()
