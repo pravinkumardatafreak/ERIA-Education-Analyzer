@@ -305,13 +305,13 @@ def analyze_document(document_text: str, api_key: str, max_refine_rounds: int = 
     analysis["strategic_recommendations"] = _run_strategist_agent(client, relevant_text, analysis)
     trace.append({"agent": "Strategist", "note": "Generated EdTech business opportunities & government AI guidance."})
 
-    # 4. Emotion tagging (existing multi-model step)
-    if "stakeholder_impact" in analysis:
-        for stakeholder in ["students", "faculty"]:
-            if stakeholder in analysis["stakeholder_impact"]:
-                details = analysis["stakeholder_impact"][stakeholder].get("details", "")
+    # 4. Emotion tagging via local Hugging Face DistilRoBERTa model
+    if "stakeholder_impact" in analysis and isinstance(analysis["stakeholder_impact"], dict):
+        for stakeholder_key, stakeholder_info in analysis["stakeholder_impact"].items():
+            if isinstance(stakeholder_info, dict):
+                details = stakeholder_info.get("details", "")
                 emotion = detect_emotion(details)
-                analysis["stakeholder_impact"][stakeholder]["emotion"] = emotion.capitalize()
+                stakeholder_info["emotion"] = emotion.capitalize()
 
     analysis["_agent_trace"] = trace
     return analysis

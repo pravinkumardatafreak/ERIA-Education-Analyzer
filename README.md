@@ -21,32 +21,40 @@ ERIA is an AI-powered platform that converts complex, unstructured education reg
 
 ---
 
+## 📌 GitHub Repository Details
+*If you are deploying or setting up this repository on GitHub, you can use these details for your repository settings:*
+
+* **Description:** An AI-powered Education Regulation Impact Analyzer built using Streamlit, Groq API (LLaMA 3.3 70B), and a local Hugging Face transformer pipeline for dynamic emotion/sentiment mapping on stakeholders, featuring a self-correction multi-agent loop and an in-memory RAG pipeline.
+* **Topics:** `nlp`, `transformers`, `multi-agent-system`, `streamlit`, `groq-api`, `llama3`, `rag`, `policy-analytics`, `edtech`, `data-science-capstone`
+>>>>>>> 21c3086 (refactor: expand emotion classification to all stakeholders and clean redundant test files)
+
+---
 ## 🚀 Features
 
-| Feature | Description |
-|---|---|
-| 📄 PDF Upload | Extract and analyze any regulation PDF |
-| 🌐 URL Scraping | Directly scrape and analyze URLs |
-| 🤖 LLM Analysis | Powered by **Groq (LLaMA 3.3 70B)** for ultra-fast inference |
-| 👥 Stakeholder Impact | Mapped for Students, Faculty, Institutions, Admins |
-| 📈 Visual Analytics | Interactive **Plotly** Sentiment Maps and Risk Gauges |
-| 📈 Impact Forecast | Short / Medium / Long term assessment |
-| ⚠️ Risk Detection | Identifies risks, compliance gaps, and opportunities |
-| 🕰️ Chronology | Policy history and amendment tracking |
-| 📥 PDF Report | Downloadable branded analysis report |
+| Feature | Technical Implementation | Description |
+|---|---|---|
+| 📄 Document Ingestion | `pdfplumber` & `BeautifulSoup4` | Extract text cleanly from local PDFs or scrape web URLs / online PDFs. |
+| 🔍 Lightweight RAG | `scikit-learn` TF-IDF + Cosine Similarity | Splits documents into overlapping word chunks and retrieves the top relevant context to optimize token count. |
+| 🤖 Agentic Analysis | Groq API (`llama-3.3-70b-versatile`) | Multi-agent self-correction loop featuring an Analyst, Critic, Refiner, and Strategist. |
+| 📝 Self-Correction | Critic (LLM-as-a-Judge) | The Critic rates draft analysis out of 10 for Grounding, Consistency, and Completeness, prompting refinement on issues. |
+| 🎭 Emotion Tagging | Local Hugging Face Pipeline (`DistilRoBERTa`) | Classifies stakeholder impact text into 7 emotion states (*joy, sadness, anger, fear, surprise, disgust, neutral*) in real-time. |
+| 📊 Visual Analytics | `Plotly` (Graph Objects) | Renders interactive sentiment bar charts and risk gauges on the Streamlit dashboard. |
+| 📈 Forecasts | LLaMA 3.3 70B Reasoner | Maps short-term (0–1 yr), medium-term (1–5 yrs), and long-term (>5 yrs) downstream impacts. |
+| 🧭 Strategic Framework | OECD Regulatory Impact Standards | Assesses Compliance Burden, Fiscal Metrics, Equity Metrics, and Academic Quality with concrete EdTech opportunities. |
+| 🕰️ Policy Chronology | Parametric & RAG retrieval | Tracks historical policy timelines and context relating back to foundational circulars (e.g., NEP 2020). |
+| 📥 PDF Report | `fpdf2` PDF Generator | Downloads a beautifully structured and color-coded executive analysis report. |
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Python 3.10+**
-- **Streamlit** – Dashboard UI
-- **Groq API** – LLaMA 3.3 70B LLM engine
-- **Plotly** – Interactive data visualizations
-- **pdfplumber** – PDF text extraction
-- **BeautifulSoup4** – Web scraping
-- **fpdf2** – PDF report generation
-- **python-dotenv** – Environment variable management
+* **Front-end UI**: Streamlit (v1.35.0+)
+* **LLM Engine**: Groq API (LLaMA 3.3 70B Versatile)
+* **Local NLP Modeling**: Hugging Face Transformers (`pipeline`), PyTorch (`torch`), Scikit-learn (`TfidfVectorizer`, `cosine_similarity`)
+* **Data Visualization**: Plotly (v5.18.0+)
+* **Text Extraction & Scraping**: pdfplumber (v0.11.0+), BeautifulSoup4 (v4.12.0+)
+* **Report Generation**: fpdf2 (v2.7.9+)
+* **Environment Management**: python-dotenv (v1.0.0+)
 
 ---
 
@@ -54,16 +62,23 @@ ERIA is an AI-powered platform that converts complex, unstructured education reg
 
 ```
 ERIA/
-├── app.py                      # Main Streamlit dashboard
+├── .streamlit/
+│   └── config.toml             # Custom theme colors (dark mode) & configurations
+├── assets/
+│   └── logo.png                # System logo image asset
 ├── modules/
 │   ├── __init__.py
-│   ├── document_processor.py   # PDF & URL text extraction
-│   ├── llm_analyzer.py         # Groq API integration & prompting
-│   └── report_generator.py     # PDF report generation
-├── requirements.txt            # Project dependencies
-├── .env.example                # Environment template
-├── .gitignore                  # Git exclusion rules
-└── README.md                   # Project documentation
+│   ├── document_processor.py   # PDF text extraction, web scraping, and RAG chunks retrieval
+│   ├── llm_analyzer.py         # Multi-agent loop (Analyst/Critic/Refiner/Strategist) & Groq calls
+│   ├── emotion_analyzer.py     # Local DistilRoBERTa Hugging Face emotion classifier
+│   └── report_generator.py     # Styled PDF report generator with UTF-8 character sanitization
+├── app.py                      # Main Streamlit dashboard interface & UI flow
+├── packages.txt                # Headless Linux system dependencies for Hugging Face Spaces
+├── requirements.txt            # Python dependencies (Streamlit, Groq, Torch, Transformers, etc.)
+├── .env.example                # Template for environment API keys
+├── .gitignore                  # Exclusion list (ignores local .env and generated *.pdf files)
+├── VIVA_AND_STUDY_GUIDE.md     # Detailed self-study and Capstone evaluation prep guide
+└── README.md                   # Project landing page and deployment metadata
 ```
 
 ---
@@ -89,13 +104,18 @@ source venv/bin/activate
 ```bash
 pip install -r requirements.txt
 ```
+*(Note: Initial run will download the local DistilRoBERTa weights (~300MB) automatically via Hugging Face).*
 
 ### 4. Configure your API key
+Create a `.env` file in the root folder (or copy from `.env.example`):
 ```bash
 copy .env.example .env
-# Edit .env and add your GROQ_API_KEY
 ```
-Get your free API key at: [https://console.groq.com](https://console.groq.com)
+Open `.env` and fill in your Groq API Key:
+```env
+GROQ_API_KEY=your_groq_api_key_here
+```
+Get your free API key at [console.groq.com](https://console.groq.com).
 
 ### 5. Run the app
 ```bash
@@ -104,42 +124,19 @@ streamlit run app.py
 
 ---
 
-## 🔑 Getting a Free Groq API Key
+## 🔑 Key Evaluation Metrics
+*These metrics measure system performance for project verification:*
 
-1. Visit [https://console.groq.com](https://console.groq.com)
-2. Sign in with your account
-3. Click **"API Keys"** → **"Create API Key"**
-4. Copy and paste into the sidebar of the app
-
----
-
-## 📊 Evaluation Metrics
-
-| Metric | Description |
-|---|---|
-| Topic Classification Accuracy | Correctly identifies regulation category |
-| Stakeholder Relevance | Impact details are accurate and specific |
-| Summarization Quality | Summary is clear and easy to understand |
-| Processing Time | Document analyzed in under 15 seconds (Groq Speed) |
-| Report Quality | PDF report is readable and complete |
+| Metric | Target / Benchmark | Description |
+|---|---|---|
+| **Topic Categorization** | >95% Accuracy | Categorizing regulations into Accreditation, Scholarship, Curriculum, etc. |
+| **Grounding Score** | $\ge$ 8/10 | Rated by the Critic agent to prevent LLM hallucinations. |
+| **Response Latency** | <15 seconds | Total RAG text extraction, Multi-Agent Loop, and local Emotion Inference time. |
+| **PDF Format Safety** | 0 character crashes | Complete replacement of non-Latin-1 characters to protect document compile. |
 
 ---
 
-## 📚 Official Regulation Sources
-
-- [UGC Circulars](https://www.ugc.gov.in/Circulars)
-- [UGC Regulations](https://www.ugc.gov.in/regulations)
-- [UGC Notices](https://www.ugc.gov.in/Notices)
-- [UGC Guidelines](https://www.ugc.gov.in/Guideline)
-- [AICTE](https://www.aicte-india.org)
-- [NAAC](https://naac.gov.in)
-
----
-
-## 📝 License
-
+## 📝 License & Attribution
 This project is developed as part of the **GUVI Zen Class Data Science Capstone Project**.
 
----
-
-*Built with ❤️ using Groq LLaMA 3.3 70B and Streamlit*
+*Built with ❤️ using Groq LLaMA 3.3 70B, Hugging Face Transformers, and Streamlit.*
