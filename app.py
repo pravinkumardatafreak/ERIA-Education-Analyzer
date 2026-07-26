@@ -637,11 +637,16 @@ def main() -> None:
     api_key, max_refine_rounds = render_sidebar()
 
     # Header
-    col_l, col_r = st.columns([1, 6])
-    with col_l:
-        st.image("assets/logo.png", width=120)
-    with col_r:
-        st.markdown('<h1 class="logo-text">ERIA</h1>', unsafe_allow_html=True)
+    logo_path = APP_DIR / "assets" / "logo.png"
+    if logo_path.exists():
+        col_l, col_r = st.columns([1, 6])
+        with col_l:
+            st.image(str(logo_path), width=120)
+        with col_r:
+            st.markdown('<h1 class="logo-text">ERIA</h1>', unsafe_allow_html=True)
+            st.markdown('<p class="logo-sub">Education Regulation Impact Analyzer</p>', unsafe_allow_html=True)
+    else:
+        st.markdown('<h1 class="logo-text">⚖️ ERIA</h1>', unsafe_allow_html=True)
         st.markdown('<p class="logo-sub">Education Regulation Impact Analyzer</p>', unsafe_allow_html=True)
 
     # ── Input Section ─────────────────────────────────────────────────────────
