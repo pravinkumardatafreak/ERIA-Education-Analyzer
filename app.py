@@ -701,7 +701,7 @@ def main() -> None:
             st.divider()
             col_btn, col_info = st.columns([1, 3])
             with col_btn:
-                analyze_btn = st.button("🔍 Analyze Regulation", width="stretch")
+                analyze_btn = st.button("🔍 Analyze Regulation", use_container_width=True)
             with col_info:
                 st.info(
                     f"📊 Document ready: **{len(document_text):,}** characters | "
