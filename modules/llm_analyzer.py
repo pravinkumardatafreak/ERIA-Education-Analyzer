@@ -11,23 +11,44 @@ from groq import Groq
 from modules.document_processor import retrieve_relevant_chunks
 from modules.emotion_analyzer import detect_emotion
 
-GROQ_MODEL = "llama-3.3-70b-versatile"
+GROQ_MODEL = "openai/gpt-oss-120b"
+FALLBACK_MODELS = [
+    "openai/gpt-oss-120b",
+    "qwen/qwen3.8-27b",
+    "llama-3.3-70b-versatile",
+    "openai/gpt-oss-20b",
+]
 
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
 
-def _call_groq(client, system_prompt, user_prompt, temperature=0.2, max_tokens=4096):
-    response = client.chat.completions.create(
-        model=GROQ_MODEL,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        temperature=temperature,
-        max_tokens=max_tokens,
-        top_p=0.8,
-    )
-    return response.choices[0].message.content.strip()
+def _call_groq(client, system_prompt, user_prompt, model=None, temperature=0.2, max_tokens=4096):
+    primary = model or GROQ_MODEL
+    candidate_models = [primary] + [m for m in FALLBACK_MODELS if m != primary]
+
+    last_error = None
+    for cand in candidate_models:
+        try:
+            response = client.chat.completions.create(
+                model=cand,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                top_p=0.8,
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            err_str = str(e).lower()
+            if "model_not_found" in err_str or "does not exist" in err_str or "do not have access" in err_str:
+                last_error = e
+                continue
+            raise e
+
+    if last_error:
+        raise last_error
 
 
 def parse_llm_response(raw_output: str) -> dict:
@@ -114,15 +135,15 @@ Return ONLY the following JSON structure with all fields filled accurately:
     return system_prompt, user_prompt
 
 
-def _run_analyst_agent(client, relevant_text: str) -> dict:
+def _run_analyst_agent(client, relevant_text: str, model: str = None) -> dict:
     system_prompt, user_prompt = build_analysis_prompt(relevant_text)
-    raw = _call_groq(client, system_prompt, user_prompt, temperature=0.2, max_tokens=4096)
+    raw = _call_groq(client, system_prompt, user_prompt, model=model, temperature=0.2, max_tokens=4096)
     return parse_llm_response(raw)
 
 
 # ── Agent 2: Critic — self-review, scores metrics (LLM-as-a-Judge), verdicts ──
 
-def _run_critic_agent(client, relevant_text: str, draft: dict) -> dict:
+def _run_critic_agent(client, relevant_text: str, draft: dict, model: str = None) -> dict:
     system_prompt = (
         "You are a strict Senior Editor reviewing a junior analyst's regulation "
         "analysis before it reaches decision-makers. Respond with STRICTLY VALID "
@@ -152,7 +173,7 @@ Return ONLY this JSON:
   "issues": ["specific issue 1", "specific issue 2"],
   "verdict": "approve" or "revise"
 }}"""
-    raw = _call_groq(client, system_prompt, user_prompt, temperature=0.1, max_tokens=800)
+    raw = _call_groq(client, system_prompt, user_prompt, model=model, temperature=0.1, max_tokens=800)
     try:
         res = parse_llm_response(raw)
         # Compute general confidence score for backwards compatibility
@@ -174,7 +195,7 @@ Return ONLY this JSON:
 
 # ── Agent 3: Refiner — corrects the draft using the critic's feedback ────────
 
-def _run_refiner_agent(client, relevant_text: str, draft: dict, critique: dict) -> dict:
+def _run_refiner_agent(client, relevant_text: str, draft: dict, critique: dict, model: str = None) -> dict:
     system_prompt = (
         "You are the same Education Policy Analyst, revising your own work after "
         "editorial feedback. Respond with STRICTLY VALID JSON only, matching the "
@@ -192,7 +213,7 @@ Editor's feedback (fix each of these before resubmitting):
 {json.dumps(critique.get("issues", []), ensure_ascii=False)}
 
 Return the corrected, complete JSON object with the SAME schema/keys as your previous draft."""
-    raw = _call_groq(client, system_prompt, user_prompt, temperature=0.15, max_tokens=4096)
+    raw = _call_groq(client, system_prompt, user_prompt, model=model, temperature=0.15, max_tokens=4096)
     try:
         return parse_llm_response(raw)
     except ValueError:
@@ -201,7 +222,7 @@ Return the corrected, complete JSON object with the SAME schema/keys as your pre
 
 # ── Agent 4: Strategist — EdTech opportunities + government AI guidance ─────
 
-def _run_strategist_agent(client, relevant_text: str, analysis: dict) -> dict:
+def _run_strategist_agent(client, relevant_text: str, analysis: dict, model: str = None) -> dict:
     system_prompt = (
         "You are a strategic advisor to EdTech founders and Ministry of Education "
         "policymakers. Respond with STRICTLY VALID JSON only, no markdown."
@@ -227,7 +248,7 @@ Return ONLY this JSON:
   "government_ai_guidance": ["...", "..."],
   "opportunity_outlook": "Low | Medium | High"
 }}"""
-    raw = _call_groq(client, system_prompt, user_prompt, temperature=0.3, max_tokens=1200)
+    raw = _call_groq(client, system_prompt, user_prompt, model=model, temperature=0.3, max_tokens=1200)
     try:
         return parse_llm_response(raw)
     except ValueError:
@@ -236,7 +257,7 @@ Return ONLY this JSON:
 
 # ── Orchestrator — the agentic self-correction loop ──────────────────────────
 
-def analyze_document(document_text: str, api_key: str, max_refine_rounds: int = 1) -> dict:
+def analyze_document(document_text: str, api_key: str, max_refine_rounds: int = 1, model: str = None) -> dict:
     """
     Agentic pipeline: Analyst -> Critic -> (Refiner, looped) -> Strategist -> Emotion tagging.
 
@@ -254,7 +275,7 @@ def analyze_document(document_text: str, api_key: str, max_refine_rounds: int = 
     relevant_text = retrieve_relevant_chunks(document_text, query=search_query, top_k=4, chunk_size=1000)
 
     # 1. Analyst drafts the first version
-    analysis = _run_analyst_agent(client, relevant_text)
+    analysis = _run_analyst_agent(client, relevant_text, model=model)
     trace.append({"agent": "Analyst", "note": "Drafted initial structured analysis."})
 
     # 2. Critic + Refiner self-correction loop
@@ -263,7 +284,7 @@ def analyze_document(document_text: str, api_key: str, max_refine_rounds: int = 
     no_improvement_count = 0
 
     for round_num in range(1, max_refine_rounds + 1):
-        critique = _run_critic_agent(client, relevant_text, analysis)
+        critique = _run_critic_agent(client, relevant_text, analysis, model=model)
         
         trace.append({
             "agent": "Critic",
@@ -298,11 +319,11 @@ def analyze_document(document_text: str, api_key: str, max_refine_rounds: int = 
             })
             break
             
-        analysis = _run_refiner_agent(client, relevant_text, analysis, critique)
+        analysis = _run_refiner_agent(client, relevant_text, analysis, critique, model=model)
         trace.append({"agent": "Refiner", "note": f"Round {round_num}: revised draft to address flagged issues."})
 
     # 3. Strategist adds business + policy-AI guidance grounded on the validated analysis
-    analysis["strategic_recommendations"] = _run_strategist_agent(client, relevant_text, analysis)
+    analysis["strategic_recommendations"] = _run_strategist_agent(client, relevant_text, analysis, model=model)
     trace.append({"agent": "Strategist", "note": "Generated EdTech business opportunities & government AI guidance."})
 
     # 4. Emotion tagging via local Hugging Face DistilRoBERTa model

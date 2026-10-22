@@ -543,8 +543,22 @@ def render_sidebar() -> tuple:
     with st.sidebar:
         st.markdown('### ⚙️ System Control')
         
+        st.markdown("#### 🧠 Model Selection")
+        available_models = [
+            "openai/gpt-oss-120b",
+            "qwen/qwen3.8-27b",
+            "llama-3.3-70b-versatile",
+            "openai/gpt-oss-20b",
+        ]
+        selected_model = st.selectbox(
+            label="Groq Model",
+            options=available_models,
+            index=0,
+            help="High-throughput model hosted on Groq LPU."
+        )
+
         # System Status Monitor
-        st.markdown("""
+        st.markdown(f"""
         <div class="status-box">
           <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 4px;">SYSTEM STATUS</div>
           <div style="display: flex; align-items: center; justify-content: space-between;">
@@ -552,7 +566,7 @@ def render_sidebar() -> tuple:
             <span style="color: #64748b; font-size: 0.8rem;">v2.2.0</span>
           </div>
           <div style="margin-top: 8px; font-size: 0.8rem; color: #94a3b8;">
-            <b>Model:</b> LLaMA 3.3 70B<br>
+            <b>Model:</b> {selected_model}<br>
             <b>Latency:</b> ~120ms/token
           </div>
         </div>
@@ -599,10 +613,10 @@ def render_sidebar() -> tuple:
             st.markdown(f"🔗 [{name}]({url})")
 
         st.divider()
-        st.markdown('<div style="font-size:0.75rem; color:#475569; text-align:center;">Powered by Groq · LLaMA 3.3 70B</div>',
+        st.markdown(f'<div style="font-size:0.75rem; color:#475569; text-align:center;">Powered by Groq · {selected_model}</div>',
                     unsafe_allow_html=True)
 
-    return api_key, max_refine_rounds
+    return api_key, max_refine_rounds, selected_model
 
 
 def get_api_key() -> str:
@@ -634,7 +648,7 @@ def get_api_key() -> str:
 def main() -> None:
     """Main application entry point."""
 
-    api_key, max_refine_rounds = render_sidebar()
+    api_key, max_refine_rounds, selected_model = render_sidebar()
 
     # Header
     logo_path = APP_DIR / "assets" / "logo.png"
@@ -705,7 +719,7 @@ def main() -> None:
             with col_info:
                 st.info(
                     f"📊 Document ready: **{len(document_text):,}** characters | "
-                    f"Model: **{GROQ_MODEL}**"
+                    f"Model: **{selected_model}**"
                 )
 
             if analyze_btn:
@@ -713,10 +727,15 @@ def main() -> None:
                     st.error("❌ Please enter your Groq API key in the sidebar.")
                     return
 
-                with st.spinner("🤖 Analyzing regulation with Groq LLaMA 3.3 70B & HF Emotion Model... (this may take 10–20 seconds)"):
+                with st.spinner(f"🤖 Analyzing regulation with Groq {selected_model} & HF Emotion Model... (this may take 10–20 seconds)"):
                      try:
                          # analyze_document handles RAG chunking and self-correction internally
-                         analysis = analyze_document(document_text, api_key, max_refine_rounds=max_refine_rounds)
+                         analysis = analyze_document(
+                             document_text,
+                             api_key,
+                             max_refine_rounds=max_refine_rounds,
+                             model=selected_model
+                         )
                          st.session_state["analysis"] = analysis
                          st.session_state["source_label"] = source_label
                          st.success("✅ Analysis complete!")
