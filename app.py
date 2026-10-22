@@ -738,7 +738,10 @@ def main() -> None:
                          )
                          st.session_state["analysis"] = analysis
                          st.session_state["source_label"] = source_label
-                         st.success("✅ Analysis complete!")
+                         if not analysis.get("is_education_regulation", True):
+                             st.warning("⚠️ Uploaded document was flagged as unrelated to education policy.")
+                         else:
+                             st.success("✅ Analysis complete!")
                      except Exception as e:
                          st.error(f"❌ Analysis failed: {str(e)}")
                          return
@@ -746,6 +749,47 @@ def main() -> None:
     # ── Results Section ───────────────────────────────────────────────────────
     if "analysis" in st.session_state:
         analysis = st.session_state["analysis"]
+
+        # ── Guardrail Alert for Irrelevant Documents ──
+        if not analysis.get("is_education_regulation", True):
+            st.divider()
+            detected_topic = analysis.get("detected_topic", "Non-Educational Subject")
+            rejection_reason = analysis.get("rejection_reason", "This document does not pertain to education policy, circulars, or statutory regulations.")
+
+            st.markdown(f"""
+            <div style="background: rgba(239, 68, 68, 0.08); border: 1.5px solid rgba(239, 68, 68, 0.4); border-radius: 10px; padding: 1.5rem; margin: 1.5rem 0;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.8rem;">
+                    <span style="font-size: 1.8rem;">🚫</span>
+                    <div>
+                        <h3 style="color: #ef4444; margin: 0; font-size: 1.25rem;">Irrelevant Document Detected</h3>
+                        <p style="color: #94a3b8; margin: 0; font-size: 0.85rem;">Policy Guardrail Verification Triggered</p>
+                    </div>
+                </div>
+                <p style="color: #e2e8f0; font-size: 0.95rem; line-height: 1.5; margin-bottom: 1rem;">
+                    The uploaded document was reviewed by ERIA's Policy Analyst and flagged as <b>unrelated to Indian higher education policy, statutory regulations, or academic circulars</b>.
+                </p>
+                <div style="background: rgba(15, 23, 42, 0.7); border-left: 4px solid #ef4444; padding: 1rem; border-radius: 6px; margin: 0.8rem 0; font-size: 0.9rem;">
+                    <div style="margin-bottom: 6px;">
+                        <b style="color: #94a3b8;">Detected Subject / Domain:</b> 
+                        <span style="color: #f87171; font-weight: 600;">{detected_topic}</span>
+                    </div>
+                    <div>
+                        <b style="color: #94a3b8;">Guardrail Assessment:</b> 
+                        <span style="color: #cbd5e1;">{rejection_reason}</span>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid rgba(239, 68, 68, 0.2); font-size: 0.85rem; color: #94a3b8;">
+                    💡 <b>Accepted Documents:</b> Official gazette circulars, guidelines, or notifications issued by <b>UGC, AICTE, NAAC, NIRF, or the Ministry of Education</b>.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            if "_agent_trace" in analysis:
+                with st.expander("🔍 Guardrail Decision Trace", expanded=True):
+                    for step in analysis["_agent_trace"]:
+                        st.markdown(f"**{step.get('agent', 'System')}**: {step.get('note', '')}")
+            return
+
         title = analysis.get("document_title", "Regulation Document")
 
         st.divider()

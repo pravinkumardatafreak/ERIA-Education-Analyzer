@@ -86,20 +86,38 @@ def build_analysis_prompt(document_text: str):
     system_prompt = (
         "You are an expert Education Policy Analyst specializing in Indian higher "
         "education regulations issued by UGC, AICTE, NAAC, NIRF, and the Ministry "
-        "of Education. Always respond with STRICTLY VALID JSON only. "
-        "Do NOT include markdown, code fences, or any text outside the JSON object."
+        "of Education. You must first verify whether the document is an education "
+        "policy or regulatory circular before analyzing it. Always respond with "
+        "STRICTLY VALID JSON only. Do NOT include markdown, code fences, or any text "
+        "outside the JSON object."
     )
 
-    user_prompt = f"""Analyze the following education regulation document and return ONLY a valid JSON object.
+    user_prompt = f"""Examine the following document excerpt carefully.
 
 DOCUMENT TEXT:
 \"\"\"
 {document_text}
 \"\"\"
 
-Return ONLY the following JSON structure with all fields filled accurately:
+STEP 1: RELEVANCE VERIFICATION
+Determine whether this document is an Education Policy, Regulation, Guideline, Official Circular, or Gazette Notification relevant to higher education, universities, colleges, academic bodies, faculty, or students (such as UGC, AICTE, NAAC, NIRF, Ministry of Education, NCERT, or institutional academic governance).
 
+CASE A: If the document is IRRELEVANT or UNRELATED to education policy/regulations (e.g., cryptocurrency, computer code/programming tutorials, financial trading, culinary/recipes, medical/clinical trials, fiction, general news, resumes, or unrelated technical papers):
+Return ONLY this JSON structure:
 {{
+  "is_education_regulation": false,
+  "relevance_confidence": 0.0,
+  "detected_topic": "<Specific subject of the document, e.g. Cryptocurrency Machine Learning Forecasting>",
+  "rejection_reason": "<Clear 2-3 sentence explanation of why this document is not an education policy, circular, or regulation>"
+}}
+
+CASE B: If the document IS a valid education regulation or academic policy document:
+Return the complete analysis JSON with all fields filled:
+{{
+  "is_education_regulation": true,
+  "relevance_confidence": 0.95,
+  "detected_topic": "<Topic>",
+  "rejection_reason": null,
   "document_title": "Exact or inferred title of the document",
   "issuing_body": "UGC / AICTE / NAAC / NIRF / Ministry of Education / Other",
   "topic_category": "One of: Accreditation | Scholarship | Curriculum | Faculty Policy | Examination | Admissions | Ranking | Infrastructure | Research | Other",
@@ -134,7 +152,7 @@ Return ONLY the following JSON structure with all fields filled accurately:
     "cost_benefit_analysis": "Quantification of hard financial and soft social benefits",
     "risk_assessment": "Legal friction points and technological dependencies"
   }},
-  "chronology_notes": "A detailed timeline and list of related historical circulars, previous amendments, and foundational policies (e.g., NEP 2020, NEP 1986, AICTE Act 1987) that provide context for this regulation. Even if not explicitly mentioned in the text, use your internal knowledge of the Indian regulatory ecosystem to provide a complete historical background.",
+  "chronology_notes": "A detailed timeline and list of related historical circulars, previous amendments, and foundational policies (e.g., NEP 2020, NEP 1986, AICTE Act 1987) that provide context for this regulation.",
   "sentiment": "Positive | Negative | Neutral | Mixed",
   "risk_level": "Low | Medium | High",
   "key_clauses": ["Important clause 1", "Important clause 2", "Important clause 3"]
@@ -286,6 +304,17 @@ def analyze_document(document_text: str, api_key: str, max_refine_rounds: int = 
     # 1. Analyst drafts the first version
     analysis = _run_analyst_agent(client, relevant_text, model=model)
     trace.append({"agent": "Analyst", "note": "Drafted initial structured analysis."})
+
+    # Guardrail: Check if document is an education regulation
+    if not analysis.get("is_education_regulation", True):
+        rejection_reason = analysis.get("rejection_reason") or "Document is unrelated to education policy or statutory regulations."
+        detected_topic = analysis.get("detected_topic", "Unrelated Subject")
+        trace.append({
+            "agent": "Analyst",
+            "note": f"Irrelevance Guardrail Triggered: Flagged as '{detected_topic}'. Analysis pipeline halted."
+        })
+        analysis["_agent_trace"] = trace
+        return analysis
 
     # 2. Critic + Refiner self-correction loop
     prev_issues_count = None
