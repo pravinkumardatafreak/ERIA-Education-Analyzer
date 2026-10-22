@@ -6,6 +6,7 @@ Uses the official 'groq' Python SDK (OpenAI-compatible interface).
 
 import json
 import re
+import time
 from groq import Groq
 
 from modules.document_processor import retrieve_relevant_chunks
@@ -22,30 +23,36 @@ FALLBACK_MODELS = [
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
 
-def _call_groq(client, system_prompt, user_prompt, model=None, temperature=0.2, max_tokens=4096):
+def _call_groq(client, system_prompt, user_prompt, model=None, temperature=0.2, max_tokens=2200):
     primary = model or GROQ_MODEL
     candidate_models = [primary] + [m for m in FALLBACK_MODELS if m != primary]
 
     last_error = None
     for cand in candidate_models:
-        try:
-            response = client.chat.completions.create(
-                model=cand,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=temperature,
-                max_tokens=max_tokens,
-                top_p=0.8,
-            )
-            return response.choices[0].message.content.strip()
-        except Exception as e:
-            err_str = str(e).lower()
-            if "model_not_found" in err_str or "does not exist" in err_str or "do not have access" in err_str:
-                last_error = e
-                continue
-            raise e
+        # If a request touches TPM limits, retry with smaller token reservation after a short refill pause
+        for attempt_tokens in [max_tokens, min(max_tokens, 1500), min(max_tokens, 1000)]:
+            try:
+                response = client.chat.completions.create(
+                    model=cand,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    temperature=temperature,
+                    max_tokens=attempt_tokens,
+                    top_p=0.8,
+                )
+                return response.choices[0].message.content.strip()
+            except Exception as e:
+                err_str = str(e).lower()
+                if "model_not_found" in err_str or "does not exist" in err_str or "do not have access" in err_str:
+                    last_error = e
+                    break  # Try next candidate model
+                if "rate_limit" in err_str or "413" in err_str or "tpm" in err_str or "429" in err_str or "tokens per minute" in err_str:
+                    last_error = e
+                    time.sleep(3)  # Allow Groq token bucket to replenish
+                    continue
+                raise e
 
     if last_error:
         raise last_error
@@ -137,7 +144,7 @@ Return ONLY the following JSON structure with all fields filled accurately:
 
 def _run_analyst_agent(client, relevant_text: str, model: str = None) -> dict:
     system_prompt, user_prompt = build_analysis_prompt(relevant_text)
-    raw = _call_groq(client, system_prompt, user_prompt, model=model, temperature=0.2, max_tokens=4096)
+    raw = _call_groq(client, system_prompt, user_prompt, model=model, temperature=0.2, max_tokens=2200)
     return parse_llm_response(raw)
 
 
@@ -151,11 +158,11 @@ def _run_critic_agent(client, relevant_text: str, draft: dict, model: str = None
     )
     user_prompt = f"""Original document excerpt:
 \"\"\"
-{relevant_text[:6000]}
+{relevant_text[:4000]}
 \"\"\"
 
 Junior analyst's draft JSON analysis:
-{json.dumps(draft, ensure_ascii=False)[:6000]}
+{json.dumps(draft, ensure_ascii=False)[:4000]}
 
 Critically review the draft. Evaluate and score the analysis on the following metrics (each from 1 to 10, where 10 is perfect):
 1. Grounding Score: Are all facts, benefits, and requirements fully supported by the document excerpt? Check for any hallucinated claims.
@@ -173,7 +180,7 @@ Return ONLY this JSON:
   "issues": ["specific issue 1", "specific issue 2"],
   "verdict": "approve" or "revise"
 }}"""
-    raw = _call_groq(client, system_prompt, user_prompt, model=model, temperature=0.1, max_tokens=800)
+    raw = _call_groq(client, system_prompt, user_prompt, model=model, temperature=0.1, max_tokens=600)
     try:
         res = parse_llm_response(raw)
         # Compute general confidence score for backwards compatibility
@@ -203,17 +210,17 @@ def _run_refiner_agent(client, relevant_text: str, draft: dict, critique: dict, 
     )
     user_prompt = f"""Original document excerpt:
 \"\"\"
-{relevant_text[:6000]}
+{relevant_text[:4000]}
 \"\"\"
 
 Your previous draft:
-{json.dumps(draft, ensure_ascii=False)}
+{json.dumps(draft, ensure_ascii=False)[:4000]}
 
 Editor's feedback (fix each of these before resubmitting):
 {json.dumps(critique.get("issues", []), ensure_ascii=False)}
 
 Return the corrected, complete JSON object with the SAME schema/keys as your previous draft."""
-    raw = _call_groq(client, system_prompt, user_prompt, model=model, temperature=0.15, max_tokens=4096)
+    raw = _call_groq(client, system_prompt, user_prompt, model=model, temperature=0.15, max_tokens=2200)
     try:
         return parse_llm_response(raw)
     except ValueError:
@@ -235,7 +242,7 @@ def _run_strategist_agent(client, relevant_text: str, analysis: dict, model: str
         "risk_level": analysis.get("risk_level"),
     }
     user_prompt = f"""Validated regulation analysis (already fact-checked):
-{json.dumps(context, ensure_ascii=False)[:5000]}
+{json.dumps(context, ensure_ascii=False)[:4000]}
 
 Based on this SPECIFIC regulation, generate:
 1. 3-5 concrete EdTech business opportunities this regulation opens up (name real products/services, not generic advice)
@@ -248,7 +255,7 @@ Return ONLY this JSON:
   "government_ai_guidance": ["...", "..."],
   "opportunity_outlook": "Low | Medium | High"
 }}"""
-    raw = _call_groq(client, system_prompt, user_prompt, model=model, temperature=0.3, max_tokens=1200)
+    raw = _call_groq(client, system_prompt, user_prompt, model=model, temperature=0.3, max_tokens=1000)
     try:
         return parse_llm_response(raw)
     except ValueError:
@@ -272,7 +279,9 @@ def analyze_document(document_text: str, api_key: str, max_refine_rounds: int = 
 
     search_query = ("students faculty institutions administrators accreditation "
                      "compliance short_term positives negatives risks opportunities equity")
-    relevant_text = retrieve_relevant_chunks(document_text, query=search_query, top_k=4, chunk_size=1000)
+    relevant_text = retrieve_relevant_chunks(document_text, query=search_query, top_k=3, chunk_size=600)
+    if len(relevant_text) > 8000:
+        relevant_text = relevant_text[:8000]
 
     # 1. Analyst drafts the first version
     analysis = _run_analyst_agent(client, relevant_text, model=model)
@@ -284,6 +293,7 @@ def analyze_document(document_text: str, api_key: str, max_refine_rounds: int = 
     no_improvement_count = 0
 
     for round_num in range(1, max_refine_rounds + 1):
+        time.sleep(1.5)  # Token bucket replenish delay
         critique = _run_critic_agent(client, relevant_text, analysis, model=model)
         
         trace.append({
@@ -319,10 +329,12 @@ def analyze_document(document_text: str, api_key: str, max_refine_rounds: int = 
             })
             break
             
+        time.sleep(1.5)  # Token bucket replenish delay
         analysis = _run_refiner_agent(client, relevant_text, analysis, critique, model=model)
         trace.append({"agent": "Refiner", "note": f"Round {round_num}: revised draft to address flagged issues."})
 
     # 3. Strategist adds business + policy-AI guidance grounded on the validated analysis
+    time.sleep(1.5)  # Token bucket replenish delay
     analysis["strategic_recommendations"] = _run_strategist_agent(client, relevant_text, analysis, model=model)
     trace.append({"agent": "Strategist", "note": "Generated EdTech business opportunities & government AI guidance."})
 
